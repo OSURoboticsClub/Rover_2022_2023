@@ -1,0 +1,4 @@
+int64 num
+---
+bool is_even
+float64 exp
