@@ -24,7 +24,9 @@ setup(
 		'simple_pub2 = ros2_examples.simple_pub2:main',
 		'simple_sub2 = ros2_examples.simple_sub2:main',
 		'simple_srv2 = ros2_examples.simple_srv2:main',
-		'simple_cli2 = ros2_examples.simple_cli2:main'
+		'simple_cli2 = ros2_examples.simple_cli2:main',
+		'simple_action_srv2 = ros2_examples.simple_action_srv2:main',
+		'simple_action_cli2 = ros2_examples.simple_action_cli2:main'
         ],
     },
 )
