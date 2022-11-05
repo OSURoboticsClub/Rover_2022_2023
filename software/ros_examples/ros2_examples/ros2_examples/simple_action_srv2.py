@@ -17,7 +17,7 @@ def is_prime(num, primes):
 class SimpleActionServer2(Node):
 	def __init__(self):
 		super().__init__("simple_action_srv2")
-		self.srvv = ActionServer(self, SimpleAction, 'simple_action', self.execute_callback)
+		self.srv = ActionServer(self, SimpleAction, 'simple_action', self.execute_callback)
 
 	def execute_callback(self, goal):
 		self.get_logger().info("Executing goal...")

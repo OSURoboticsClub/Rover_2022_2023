@@ -18,6 +18,7 @@ def main(args=None):
 	rclpy.init(args=args)
 	simple_srv2 = SimpleService2()
 	rclpy.spin(simple_srv2)
+	simple_srv2.destroy_node()
 	rclpy.shutdown()
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ import time
 
 class SimpleClient2(Node):
 	def __init__(self):
-		super().__init__("simple_client2")
+		super().__init__("simple_cli2")
 		self.cli = self.create_client(SimpleSrvCli, "simple_srv_cli")
 		while not self.cli.wait_for_service(timeout_sec=1):
 			self.get_logger().info("Waiting for service")
@@ -30,6 +30,7 @@ def main(args=None):
 			time.sleep(1)
 		except KeyboardInterrupt:
 			break
+	simple_cli2.destroy_node()
 	rclpy.shutdown()
 
 
