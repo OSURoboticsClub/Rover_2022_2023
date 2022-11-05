@@ -31,7 +31,7 @@ class RoverStatuses:
         self.GPS_msg = GPSInfo()
         self.jetson_msg = JetsonInfo()
         self.misc_msg = MiscStatuses()
-	self.motor_msg = MotorStatus()
+        self.motor_msg = MotorStatus()
 
     def __camera_callback(self, data):
         self.camera_msg.camera_zed = data.camera_zed
@@ -67,8 +67,8 @@ class RoverStatuses:
         self.misc_msg.chassis_pan_tilt_connection_status = data.chassis_pan_tilt_connection_status
 
     def __motor_callback(self,data):
-	self.motor_msg.motor_temperature = motor.temp
-	self.motor_msg.motor_current = motor.current
+        self.motor_msg.motor_temperature = motor.temp
+        self.motor_msg.motor_current = motor.current
 
     def run(self):
         rospy.Subscriber('camera_system_status_chatter', CameraStatuses, self.__camera_callback)
@@ -76,7 +76,7 @@ class RoverStatuses:
         rospy.Subscriber('FrSky_system_status_chatter', FrSkyStatus, self.__frsky_callback)
         rospy.Subscriber('GPS_system_status_chatter', GPSInfo, self.__gps_callback)
         rospy.Subscriber('jetson_system_status_chatter', JetsonInfo, self.__jetson_callback)
-	rospy.Subscriber('motor_system_status_chatter', MotorStatus, self.__jetson_callback)
+        rospy.Subscriber('motor_system_status_chatter', MotorStatus, self.__jetson_callback)
         rospy.Subscriber('misc_system_status_chatter', MiscStatuses, self.__misc_callback)
         rospy.spin()
 

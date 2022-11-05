@@ -51,7 +51,7 @@ class AutoPoweroffWatchdog(object):
         self.watched_devices = devices
         self.shutdown_timeout = shutdown_timeout
         self.do_poweroff = do_poweroff
-	self.iris_detected = iris_detected
+        self.iris_detected = iris_detected
 
         # ########## Thread Flags ##########
         self.run_thread_flag = True
@@ -59,19 +59,19 @@ class AutoPoweroffWatchdog(object):
         self.run()
 
     def run(self):
-	while not self.iris_detected:
-	    self.check_devices()
+        while not self.iris_detected:
+            self.check_devices()
             sleep(0.25)
-        while self.run_thread_flag:
-            self.check_and_update_devices()
-            self.initiate_shutdown_if_needed()
-            sleep(0.25)
+            while self.run_thread_flag:
+                self.check_and_update_devices()
+                self.initiate_shutdown_if_needed()
+                sleep(0.25)
 
     def check_devices(self):
         for device in self.watched_devices:
             if not exists(device):
-		return
-	self.iris_detected = True
+                return
+        self.iris_detected = True
 
     def check_and_update_devices(self):
         for device in self.watched_devices:

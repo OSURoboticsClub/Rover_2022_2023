@@ -107,7 +107,7 @@ class SystemStatuses:
         self.jetson_msg = JetsonInfo()
         self.misc_msg = MiscStatuses()
 #############initiate motor_msg
-	self.motor_msg = MotorStatus()
+        self.motor_msg = MotorStatus()
 #############16 February 2019
 
         # init all message values
@@ -132,7 +132,7 @@ class SystemStatuses:
         self.__set_jetson_usage_information()
         self.__set_frsky_controller_connection_status()
 #############Initiate motor message values
-	self.__set_motor_status()
+    self.__set_motor_status()
 #############16 February 2019
 
     # Pulls the UTC GPS Information (WIP v2.0)
