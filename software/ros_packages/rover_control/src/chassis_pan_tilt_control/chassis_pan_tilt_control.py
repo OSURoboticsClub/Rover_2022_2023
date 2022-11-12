@@ -3,7 +3,8 @@
 # Imports
 #####################################
 # Python native imports
-import rospy
+import rclpy
+from rclpy.node import Node
 
 from time import time, sleep
 
@@ -59,28 +60,32 @@ NODE_LAST_SEEN_TIMEOUT = 2  # seconds
 #####################################
 # DriveControl Class Definition
 #####################################
-class ChassisPanTiltControl(object):
+
+# class based on the Node object, which gives access to Node functions
+# wary traveler, visit https://docs.ros2.org/foxy/api/rclpy/api/node.html for node basics
+class ChassisPanTiltControl(Node):
     def __init__(self):
-        rospy.init_node(NODE_NAME)
+        # initializes the node, calling it what NODE_NAME stores
+        super().__init__(NODE_NAME)
 
-        self.port = rospy.get_param("~port", DEFAULT_PORT)
-        self.baud = rospy.get_param("~baud", DEFAULT_BAUD)
+        # creates several variables within the Node object in question
+        self.port = self.get_parameter_or("~port", DEFAULT_PORT)
+        self.baud = self.get_parameter_or("~baud", DEFAULT_BAUD)
 
-        self.pan_tilt_node_id = rospy.get_param("~pan_tilt_node_id", PAN_TILT_NODE_ID)
+        self.pan_tilt_node_id = self.get_parameter_or("~pan_tilt_node_id", PAN_TILT_NODE_ID)
+        self.pan_tilt_control_subscriber_topic = self.get_parameter_or("~pan_tilt_control_topic",
+                                                                        DEFAULT_PAN_TILT_CONTROL_TOPIC)
 
-        self.pan_tilt_control_subscriber_topic = rospy.get_param("~pan_tilt_control_topic",
-                                                                 DEFAULT_PAN_TILT_CONTROL_TOPIC)
-
-        self.wait_time = 1.0 / rospy.get_param("~hertz", DEFAULT_HERTZ)
+        self.wait_time = 1.0 / self.get_parameter_or("~hertz", DEFAULT_HERTZ)
 
         self.pan_tilt_node = None
         self.tower_node = None
 
         self.connect_to_pan_tilt_and_tower()
 
-        self.pan_tilt_control_subscriber = rospy.Subscriber(self.pan_tilt_control_subscriber_topic,
-                                                            TowerPanTiltControlMessage,
-                                                            self.pan_tilt_control_callback)
+        self.pan_tilt_control_subscriber = self.create_subscription(self.pan_tilt_control_subscriber_topic,
+                                                                    TowerPanTiltControlMessage,
+                                                                    self.pan_tilt_control_callback)
 
         self.pan_tilt_control_message = None
         self.new_pan_tilt_control_message = False
@@ -98,7 +103,7 @@ class ChassisPanTiltControl(object):
     def run(self):
         # self.send_startup_centering_command()
 
-        while not rospy.is_shutdown():
+        while rclpy.ok(): # could also be "not rclpy.shutdown()"
             start_time = time()
 
             try:
@@ -107,7 +112,6 @@ class ChassisPanTiltControl(object):
 
             except Exception as error:
                 pass
-                # print "Error occurred:", error
 
             if (time() - self.modbus_nodes_seen_time) > NODE_LAST_SEEN_TIMEOUT:
                 print("Chassis pan/tilt not seen for", NODE_LAST_SEEN_TIMEOUT, "seconds. Exiting.")
@@ -160,5 +164,17 @@ class ChassisPanTiltControl(object):
         self.pan_tilt_control_message = pan_tilt_control
         self.new_pan_tilt_control_message = True
 
+# called when this file is ran (not as a script)
+def main(args=None):
+    # initializes rclpy with arguments
+    rclpy.init(args=args)
+    # assigns the variable cptc to a Node object class
+    cptc = ChassisPanTiltControl()
+    # runs the Node cptc
+    rcply.spin(cptc)
+    cptc.destroy_node()
+    rcply.shutdown()
+
+# called when this file is ran (as a script)
 if __name__ == "__main__":
-    ChassisPanTiltControl()
+    main()
