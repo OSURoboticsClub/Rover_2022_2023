@@ -13,6 +13,8 @@ Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "mining", "mining\mining.cpr
 EndProject
 Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "chassis-pantilt", "chassis-pantilt\chassis-pantilt.cproj", "{A577F517-AD46-4222-8BB0-9ACACAF87E54}"
 EndProject
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "bms", "bms\bms.cproj", "{A3EC2503-4B8E-43F3-BC60-903B925AA699}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM
@@ -39,6 +41,10 @@ Global
 		{A577F517-AD46-4222-8BB0-9ACACAF87E54}.Debug|ARM.Build.0 = Debug|ARM
 		{A577F517-AD46-4222-8BB0-9ACACAF87E54}.Release|ARM.ActiveCfg = Release|ARM
 		{A577F517-AD46-4222-8BB0-9ACACAF87E54}.Release|ARM.Build.0 = Release|ARM
+		{A3EC2503-4B8E-43F3-BC60-903B925AA699}.Debug|ARM.ActiveCfg = Debug|ARM
+		{A3EC2503-4B8E-43F3-BC60-903B925AA699}.Debug|ARM.Build.0 = Debug|ARM
+		{A3EC2503-4B8E-43F3-BC60-903B925AA699}.Release|ARM.ActiveCfg = Release|ARM
+		{A3EC2503-4B8E-43F3-BC60-903B925AA699}.Release|ARM.Build.0 = Release|ARM
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
