@@ -1,4 +1,7 @@
-#include <port.h>
+#include "port.h"
+#include "modbus.h"
+
+uint16_t timeout;
 
 Uart *RS485Port;
 Pio *globalEnPinPort;
@@ -42,15 +45,16 @@ void TC0_Handler(void)
 	}
 }
 
-uint32_t millis(void)
+uint32_t millis_wr(void)
 {
 	// Return elapsed ms plus the current value of the timer
 	// Since the timer ticks 32000 times a second, divide by 32 to get ms
 	return elapsed_ms + ((REG_TC0_CV0) / 32);
 }
 
-void portSetup(Uart *port485, const uint32_t baud, Pio *enPinPort, const uint32_t enPin)
+void portSetup(int slave_id, Uart *port485, const uint32_t baud, Pio *enPinPort, const uint32_t enPin, const uint16_t serialTimeout)
 {
+	timeout = serialTimeout;
 	RS485Port = port485;
 
 	if (RS485Port == UART0)
@@ -87,6 +91,8 @@ void portSetup(Uart *port485, const uint32_t baud, Pio *enPinPort, const uint32_
 	globalEnPin = enPin;
 
 	init_timer(); // Enable timer for timeout purposes
+	
+	modbus_init(slave_id);
 }
 
 void portWrite(uint8_t *packet, uint16_t packetSize)
@@ -129,4 +135,8 @@ void UART0_Handler()
 void UART1_Handler()
 {
 	UART_Handler();
+}
+
+void modbus_update_wr(void) {
+	modbus_update();
 }
