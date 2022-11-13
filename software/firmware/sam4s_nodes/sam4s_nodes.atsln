@@ -9,6 +9,8 @@ Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "tower", "tower\tower.cproj"
 EndProject
 Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "tower_pan_tilt", "tower_pan_tilt\tower_pan_tilt.cproj", "{63DA349C-1EF6-4FA2-8950-07B6A5DBB707}"
 EndProject
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "mining", "mining\mining.cproj", "{4E15A802-4800-47D0-AA43-B721194140FE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM
@@ -27,6 +29,10 @@ Global
 		{63DA349C-1EF6-4FA2-8950-07B6A5DBB707}.Debug|ARM.Build.0 = Debug|ARM
 		{63DA349C-1EF6-4FA2-8950-07B6A5DBB707}.Release|ARM.ActiveCfg = Release|ARM
 		{63DA349C-1EF6-4FA2-8950-07B6A5DBB707}.Release|ARM.Build.0 = Release|ARM
+		{4E15A802-4800-47D0-AA43-B721194140FE}.Debug|ARM.ActiveCfg = Debug|ARM
+		{4E15A802-4800-47D0-AA43-B721194140FE}.Debug|ARM.Build.0 = Debug|ARM
+		{4E15A802-4800-47D0-AA43-B721194140FE}.Release|ARM.ActiveCfg = Release|ARM
+		{4E15A802-4800-47D0-AA43-B721194140FE}.Release|ARM.Build.0 = Release|ARM
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
