@@ -7,6 +7,8 @@ Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "modbus_interface", "modbus_
 EndProject
 Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "tower", "tower\tower.cproj", "{10432FD7-A85A-4AB3-831A-5C382B36CA53}"
 EndProject
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "tower_pan_tilt", "tower_pan_tilt\tower_pan_tilt.cproj", "{63DA349C-1EF6-4FA2-8950-07B6A5DBB707}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM
@@ -21,6 +23,10 @@ Global
 		{10432FD7-A85A-4AB3-831A-5C382B36CA53}.Debug|ARM.Build.0 = Debug|ARM
 		{10432FD7-A85A-4AB3-831A-5C382B36CA53}.Release|ARM.ActiveCfg = Release|ARM
 		{10432FD7-A85A-4AB3-831A-5C382B36CA53}.Release|ARM.Build.0 = Release|ARM
+		{63DA349C-1EF6-4FA2-8950-07B6A5DBB707}.Debug|ARM.ActiveCfg = Debug|ARM
+		{63DA349C-1EF6-4FA2-8950-07B6A5DBB707}.Debug|ARM.Build.0 = Debug|ARM
+		{63DA349C-1EF6-4FA2-8950-07B6A5DBB707}.Release|ARM.ActiveCfg = Release|ARM
+		{63DA349C-1EF6-4FA2-8950-07B6A5DBB707}.Release|ARM.Build.0 = Release|ARM
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
