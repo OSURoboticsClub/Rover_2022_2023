@@ -65,7 +65,7 @@ extern struct ringBuffer rxBuffer;
 extern uint8_t responsePacket[TX_BUFFER_SIZE];
 extern uint16_t responsePacketSize;
 
-bool communicationGood(void);
+bool modbus_slave_comm_good(void);
 
 void modbus_slave_init(const uint8_t);    // Initialize modbus uart port, clock, memory, transmit enable, and ...
 

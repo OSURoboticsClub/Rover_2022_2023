@@ -114,7 +114,7 @@ void popToFc()
 // PACKET TIMEOUT STUFF //
 uint32_t last_complete = 0;
 
-bool communicationGood()
+bool modbus_slave_comm_good()
 {
 	return !(get_elapsed_ms() - last_complete > timeout);
 }

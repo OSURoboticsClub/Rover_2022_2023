@@ -140,3 +140,7 @@ void UART1_Handler()
 void modbus_update(void) {
 	modbus_slave_update();
 }
+
+bool modbus_comm_good(void) {
+	return modbus_slave_comm_good();
+}
