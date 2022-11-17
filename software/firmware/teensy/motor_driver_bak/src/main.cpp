@@ -40,6 +40,8 @@ enum MODBUS_REGISTERS {
 const uint8_t node_id = 2;
 const uint8_t mobus_serial_port_number = 3;
 
+uint8_t num_modbus_registers = 0;
+
 int8_t poll_state = 0;
 bool communication_good = false;
 uint8_t message_count = 0;
@@ -48,6 +50,22 @@ uint16_t rampdown_step = 2000;
 
 ////////// Class Instantiations //////////
 CSTS sense(50,2.2,158,81,(3.3/1024));
+
+void setup() {
+    setup_hardware();
+
+    num_modbus_registers = sizeof(intRegisters) / sizeof(intRegisters[0]);
+    modbus_init(node_id, mobus_serial_port_number, HARDWARE::RS485_EN, 115200, 150);
+
+    Serial.begin(9600);
+}
+
+void loop() {
+    poll_modbus();
+    set_leds();
+    set_motor();
+    poll_sensors_and_motor_state();
+}
 
 void setup_hardware(){
     // Setup pins as inputs / outputs
@@ -135,19 +153,4 @@ void poll_sensors_and_motor_state(){
     intRegisters[MODBUS_REGISTERS::TEMPERATURE] = (uint16_t)(temperature);
 
     Serial.println(intRegisters[MODBUS_REGISTERS::CURRENT]);
-}
-
-void setup() {
-    setup_hardware();
-
-    modbus_init(node_id, mobus_serial_port_number, HARDWARE::RS485_EN, 115200, 150);
-
-    Serial.begin(9600);
-}
-
-void loop() {
-    poll_modbus();
-    set_leds();
-    set_motor();
-    poll_sensors_and_motor_state();
 }
