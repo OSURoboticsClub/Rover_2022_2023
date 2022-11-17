@@ -137,6 +137,6 @@ void UART1_Handler()
 	UART_Handler();
 }
 
-void modbus_update_wr(void) {
+void modbus_update(void) {
 	modbus_slave_update();
 }

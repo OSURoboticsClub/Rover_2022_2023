@@ -15,11 +15,10 @@ extern bool			boolRegisters[REGISTER_AR_SIZE];
 extern uint16_t timeout;
 
 void modbus_init(int, Uart*, const uint32_t, Pio*, const uint32_t, const uint16_t);
+void modbus_update(void);
 
 void serial_write(uint8_t*, uint16_t);
 
 uint32_t millis_wr(void);
-
-void modbus_update_wr(void);
 
 #endif

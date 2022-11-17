@@ -28,6 +28,6 @@ int main(void) {
 	}*/
 	
 	while(1) {
-		modbus_update_wr();
+		modbus_update();
 	}
 }
