@@ -16,7 +16,7 @@ extern uint16_t timeout;
 
 void portSetup(int, Uart*, const uint32_t, Pio*, const uint32_t, const uint16_t);
 
-void portWrite(uint8_t*, uint16_t);
+void serial_write(uint8_t*, uint16_t);
 
 uint32_t millis_wr(void);
 

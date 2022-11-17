@@ -95,7 +95,7 @@ void portSetup(int slave_id, Uart *port485, const uint32_t baud, Pio *enPinPort,
 	modbus_init(slave_id);
 }
 
-void portWrite(uint8_t *packet, uint16_t packetSize)
+void serial_write(uint8_t *packet, uint16_t packetSize)
 {
 	// write out response packet
 	pio_set(globalEnPinPort, globalEnPin); // transceiver transmit enable

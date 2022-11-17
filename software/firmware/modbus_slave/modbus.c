@@ -269,7 +269,7 @@ void modbus_update(void){
 	responsePacket[responsePacketSize-1] = (responceCRC>>8) & 0xff;
 	
 	// write out response packet
-	portWrite(responsePacket, responsePacketSize);
+	serial_write(responsePacket, responsePacketSize);
 
 	reset_timeout();
 }
