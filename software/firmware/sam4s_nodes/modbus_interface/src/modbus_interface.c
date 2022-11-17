@@ -45,7 +45,7 @@ void TC0_Handler(void)
 	}
 }
 
-uint32_t millis_wr(void)
+uint32_t get_elapsed_ms(void)
 {
 	// Return elapsed ms plus the current value of the timer
 	// Since the timer ticks 32000 times a second, divide by 32 to get ms

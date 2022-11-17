@@ -116,12 +116,12 @@ uint32_t last_complete = 0;
 
 bool communicationGood()
 {
-	return !(millis_wr() - last_complete > timeout);
+	return !(get_elapsed_ms() - last_complete > timeout);
 }
 
 static void reset_timeout(void)
 {
-	last_complete = millis_wr();
+	last_complete = get_elapsed_ms();
 }
 // END PACKET TIMEOUT STUFF //
 

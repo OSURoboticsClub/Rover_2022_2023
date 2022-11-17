@@ -19,6 +19,6 @@ void modbus_update(void);
 
 void serial_write(uint8_t*, uint16_t);
 
-uint32_t millis_wr(void);
+uint32_t get_elapsed_ms(void);
 
 #endif
