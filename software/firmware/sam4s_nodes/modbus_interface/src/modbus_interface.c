@@ -45,6 +45,14 @@ void TC0_Handler(void)
 	}
 }
 
+void serial_write(uint8_t *packet, uint16_t packetSize)
+{
+	// write out response packet
+	pio_set(globalEnPinPort, globalEnPin); // transceiver transmit enable
+	transmitIndex = 0;
+	uart_enable_interrupt(RS485Port, UART_IMR_TXRDY);
+}
+
 uint32_t get_elapsed_ms(void)
 {
 	// Return elapsed ms plus the current value of the timer
@@ -95,13 +103,14 @@ void modbus_init(int slave_id, Uart *port485, const uint32_t baud, Pio *enPinPor
 	modbus_slave_init(slave_id);
 }
 
-void serial_write(uint8_t *packet, uint16_t packetSize)
-{
-	// write out response packet
-	pio_set(globalEnPinPort, globalEnPin); // transceiver transmit enable
-	transmitIndex = 0;
-	uart_enable_interrupt(RS485Port, UART_IMR_TXRDY);
+void modbus_update(void) {
+	modbus_slave_update();
 }
+
+bool modbus_comm_good(void) {
+	return modbus_slave_comm_good();
+}
+
 
 // interrupt handler for incoming data
 void UART_Handler(void)
@@ -127,20 +136,14 @@ void UART_Handler(void)
 }
 
 // Regardless of what UART port triggers the interrupt, the behavior is the same
+#pragma weak UART0_Handler
 void UART0_Handler()
 {
 	UART_Handler();
 }
 
+#pragma weak UART1_Handler
 void UART1_Handler()
 {
 	UART_Handler();
-}
-
-void modbus_update(void) {
-	modbus_slave_update();
-}
-
-bool modbus_comm_good(void) {
-	return modbus_slave_comm_good();
 }
