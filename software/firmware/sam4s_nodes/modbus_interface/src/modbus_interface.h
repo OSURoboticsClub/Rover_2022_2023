@@ -14,7 +14,7 @@ extern bool			boolRegisters[REGISTER_AR_SIZE];
 
 extern uint16_t timeout;
 
-void portSetup(int, Uart*, const uint32_t, Pio*, const uint32_t, const uint16_t);
+void modbus_init(int, Uart*, const uint32_t, Pio*, const uint32_t, const uint16_t);
 
 void serial_write(uint8_t*, uint16_t);
 

@@ -52,7 +52,7 @@ uint32_t millis_wr(void)
 	return elapsed_ms + ((REG_TC0_CV0) / 32);
 }
 
-void portSetup(int slave_id, Uart *port485, const uint32_t baud, Pio *enPinPort, const uint32_t enPin, const uint16_t serialTimeout)
+void modbus_init(int slave_id, Uart *port485, const uint32_t baud, Pio *enPinPort, const uint32_t enPin, const uint16_t serialTimeout)
 {
 	timeout = serialTimeout;
 	RS485Port = port485;
@@ -92,7 +92,7 @@ void portSetup(int slave_id, Uart *port485, const uint32_t baud, Pio *enPinPort,
 
 	init_timer(); // Enable timer for timeout purposes
 	
-	modbus_init(slave_id);
+	modbus_slave_init(slave_id);
 }
 
 void serial_write(uint8_t *packet, uint16_t packetSize)
@@ -138,5 +138,5 @@ void UART1_Handler()
 }
 
 void modbus_update_wr(void) {
-	modbus_update();
+	modbus_slave_update();
 }

@@ -67,9 +67,9 @@ extern uint16_t responsePacketSize;
 
 bool communicationGood(void);
 
-void modbus_init(const uint8_t);    // Initialize modbus uart port, clock, memory, transmit enable, and ...
+void modbus_slave_init(const uint8_t);    // Initialize modbus uart port, clock, memory, transmit enable, and ...
 
-void modbus_update(void);   //This function does all of the heavy lifting for modbus
+void modbus_slave_update(void);   //This function does all of the heavy lifting for modbus
 
 #define FC_WRITE_MULT	0x10	//write multiple registers function code
 #define FC_READ_MULT	0x03	//read multiple registers function code

@@ -220,13 +220,13 @@ uint16_t getReadResponseDataSize(uint16_t start_reg, uint16_t end_reg) {
 	return size;	
 }
 
-void modbus_init(const uint8_t slave_id){
+void modbus_slave_init(const uint8_t slave_id){
 	slaveID = slave_id;
 	rxBuffer.head = 0;
 	rxBuffer.tail = 0;
 }
 
-void modbus_update(void){
+void modbus_slave_update(void){
 	if(buffer_get_data_sz() < ABS_MIN_PACKET_SIZE) return;			//if not enough data has been received just break out
 	if( !packet_complete()) return;									//check if an entire packet has been received otherwise return, also resolves overflow errors
 	uint8_t* packet = pop_packet();									//packet is complete, so pull it out
