@@ -515,10 +515,10 @@
     <None Include="src\ASF\sam\drivers\pio\pio.h">
       <SubType>compile</SubType>
     </None>
-    <Compile Include="src\port.c">
+    <Compile Include="src\modbus_interface.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\port.h">
+    <Compile Include="src\modbus_interface.h">
       <SubType>compile</SubType>
     </Compile>
     <None Include="src\asf.h">

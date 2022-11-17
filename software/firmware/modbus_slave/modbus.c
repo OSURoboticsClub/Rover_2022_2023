@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include <modbus.h>
 #include <string.h> // For memcpy
-#include "port.h"
+#include "modbus_interface.h"
 
 uint8_t slaveID;
 

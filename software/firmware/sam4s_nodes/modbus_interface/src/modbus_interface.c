@@ -1,4 +1,4 @@
-#include "port.h"
+#include "modbus_interface.h"
 #include "modbus.h"
 
 uint16_t timeout;
