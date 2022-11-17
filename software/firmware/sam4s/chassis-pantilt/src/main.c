@@ -47,7 +47,6 @@ void handle_pan_tilt(servo_s *pan_servo, servo_s *tilt_servo) {
 
 int main(void) {
 	sysclk_init();
-	board_init();
 	
 	modbus_init(MODBUS_SLAVE_ID, MODBUS_SER_PORT, MODBUS_BPS, MODBUS_EN_PORT, MODBUS_EN_PIN, MODBUS_TIMEOUT);
 	
