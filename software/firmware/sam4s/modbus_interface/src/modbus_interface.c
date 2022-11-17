@@ -1,8 +1,11 @@
 #include "modbus_interface.h"
 #include "modbus.h"
 
-/* Begin modbus slave library references */
+/* Begin modbus slave library AND node references */
 uint16_t timeout;
+/* End modbus slave library AND node references */
+
+/* Begin modbus slave library references */
 
 Uart *RS485Port;
 Pio *globalEnPinPort;
