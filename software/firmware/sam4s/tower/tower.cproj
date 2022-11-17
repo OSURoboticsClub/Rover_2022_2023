@@ -382,6 +382,8 @@
       <Value>../src/ASF/common/services/serial/sam_uart</Value>
       <Value>../src/ASF/common/services/serial</Value>
       <Value>../src/ASF/sam/drivers/usart</Value>
+      <Value>../src/FastLED</Value>
+      <Value>../src/led_control</Value>
     </ListValues>
   </armgcc.compiler.directories.IncludePaths>
   <armgcc.compiler.optimization.level>Optimize (-O1)</armgcc.compiler.optimization.level>
@@ -499,6 +501,8 @@
     <Folder Include="src\ASF\thirdparty\CMSIS\Lib\GCC\" />
     <Folder Include="src\config\" />
     <Folder Include="src\gps" />
+    <Folder Include="src\FastLED" />
+    <Folder Include="src\led_control" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\config\conf_clock.h">
@@ -963,10 +967,22 @@
     <None Include="src\config\conf_uart_serial.h">
       <SubType>compile</SubType>
     </None>
+    <Compile Include="src\FastLED\FastLED.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\FastLED\FastLED.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\gps\gps.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\gps\gps.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\led_control\led_control.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\led_control\led_control.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\main.c">
