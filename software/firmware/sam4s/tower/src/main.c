@@ -1,6 +1,6 @@
 #include <asf.h>
 #include "modbus_interface.h"
-//#include "gps.h"
+#include "gps.h"
 //#include "led_control.h"
 
 // Modbus specific information
@@ -19,13 +19,13 @@ int main(void) {
 	
 	modbus_init(MODBUS_SLAVE_ID, MODBUS_SER_PORT, MODBUS_BPS, MODBUS_EN_PORT, MODBUS_EN_PIN, MODBUS_TIMEOUT);
 	
-	/*gps_setup();
+	gps_setup();
 
 	while (1) {
 		modbus_update();
-		set_LEDs();
+		//set_LEDs();
 		gps_handle();
-	}*/
+	}
 	
 	while(1) {
 		modbus_update();

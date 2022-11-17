@@ -65,6 +65,9 @@
 // From module: Interrupt management - SAM implementation
 #include <interrupt.h>
 
+// From module: PIO - Parallel Input/Output Controller
+#include <pio.h>
+
 // From module: PMC - Power Management Controller
 #include <pmc.h>
 #include <sleep.h>
@@ -77,5 +80,14 @@
 
 // From module: UART - Univ. Async Rec/Trans
 #include <uart.h>
+
+// From module: USART - Serial interface - SAM implementation for devices with both UART and USART
+#include <serial.h>
+
+// From module: USART - Univ. Syn Async Rec/Trans
+#include <usart.h>
+
+// From module: pio_handler support enabled
+#include <pio_handler.h>
 
 #endif // ASF_H
