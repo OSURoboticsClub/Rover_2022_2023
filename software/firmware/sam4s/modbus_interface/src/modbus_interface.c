@@ -49,7 +49,7 @@ void TC0_Handler(void)
 	}
 }
 
-void serial_write(uint8_t *packet, uint16_t packetSize)
+void serial_port_write(uint8_t *packet, uint16_t packetSize)
 {
 	// write out response packet
 	pio_set(globalEnPinPort, globalEnPin); // transceiver transmit enable

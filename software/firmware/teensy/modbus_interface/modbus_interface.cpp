@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "port.h"
+#include "modbus_interface.h"
 #include "modbus.h"
 
 
@@ -39,8 +39,15 @@ extern "C"
 {
 #endif
 
-void portSetup(uint8_t serialNumber, uint8_t TXEnablePin, const uint32_t baud, const uint16_t serialTimeout)
-{
+void serial_port_write(uint8_t *packet, uint16_t packetSize) {
+    _write(packet, packetSize);
+}
+
+uint32_t get_elapsed_ms() {
+    return millis();
+}
+
+void modbus_init(uint8_t slave_id, uint8_t serialNumber, uint8_t TXEnablePin, const uint32_t baud, const uint16_t serialTimeout) {
     timeout = serialTimeout;
 
     switch (serialNumber)
@@ -71,21 +78,17 @@ void portSetup(uint8_t serialNumber, uint8_t TXEnablePin, const uint32_t baud, c
 
     while (_read() >= 0)
         ;
+    
+    modbus_slave_init(slave_id);
 }
 
-void portWrite(uint8_t *packet, uint16_t packetSize)
-{
-    _write(packet, packetSize);
+void modbus_update() {
+    modbus_slave_update();
 }
 
-void modbus_update_wr() {
-    modbus_update();
+bool modbus_comm_good() {
+    return modbus_slave_comm_good();
 }
-
-uint32_t millis_wr() {
-    return millis();
-}
-
 
 #ifdef __cplusplus
 }

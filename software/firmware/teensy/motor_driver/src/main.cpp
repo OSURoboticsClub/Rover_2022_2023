@@ -1,13 +1,13 @@
 #include <Arduino.h>
-#include "port.h"
+#include "modbus_interface.h"
 
 int lol = 0;
 
 void setup() {
-  portSetup(1, 1, 1, 1);
+  modbus_init(1, 1, 1, 1, 1);
 }
 
 void loop() {
-  modbus_update_wr();
+  modbus_update();
   lol += intRegisters[0];
 }

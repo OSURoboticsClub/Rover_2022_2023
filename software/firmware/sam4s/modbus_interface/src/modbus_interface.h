@@ -10,7 +10,7 @@
 extern uint16_t timeout;
 
 // Referenced by slave library (might one day factor out into separate library)
-void serial_write(uint8_t*, uint16_t);
+void serial_port_write(uint8_t*, uint16_t);
 uint32_t get_elapsed_ms(void);
 
 // Referenced by nodes
