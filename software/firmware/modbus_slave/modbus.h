@@ -42,34 +42,12 @@
 #ifndef MODBUS_H_
 #define MODBUS_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define RX_BUFFER_SIZE 8192 // size of RX buffer, this determines max incoming packet size
 #define TX_BUFFER_SIZE 8192 //							!!!!!! Important change this value to the size of the tx buffer in the UART module
 
 // To handle edge case if a packet starts toward end of buffer but wraps around to beginning
 #define PKT_WRAP_ARND(idx) \
     ((idx) & (RX_BUFFER_SIZE - 1))
-
-struct ringBuffer
-{                  // ring buffer to serve as rx buffer. Helps solve lots of data shifting problems
-    uint16_t head; // Next free space in the buffer
-    uint16_t tail; // Start of unprocessed data and beginning of packet
-    uint8_t data[RX_BUFFER_SIZE];
-};
-
-extern struct ringBuffer rxBuffer;
-
-extern uint8_t responsePacket[TX_BUFFER_SIZE];
-extern uint16_t responsePacketSize;
-
-bool modbus_slave_comm_good(void);
-
-void modbus_slave_init(const uint8_t);    // Initialize modbus uart port, clock, memory, transmit enable, and ...
-
-void modbus_slave_update(void);   //This function does all of the heavy lifting for modbus
 
 #define FC_WRITE_MULT	0x10	//write multiple registers function code
 #define FC_READ_MULT	0x03	//read multiple registers function code
@@ -111,6 +89,25 @@ void modbus_slave_update(void);   //This function does all of the heavy lifting 
 
 
 //#define MODBUS_DEBUG				//uncomment this to enable debugging over USB_CDC this depends on USB_CDC being initialized elsewhere
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct ringBuffer
+{                  // ring buffer to serve as rx buffer. Helps solve lots of data shifting problems
+    uint16_t head; // Next free space in the buffer
+    uint16_t tail; // Start of unprocessed data and beginning of packet
+    uint8_t data[RX_BUFFER_SIZE];
+};
+
+extern struct ringBuffer rxBuffer;
+extern uint8_t responsePacket[TX_BUFFER_SIZE];
+extern uint16_t responsePacketSize;
+
+void modbus_slave_init(const uint8_t);    // Initialize modbus uart port, clock, memory, transmit enable, and ...
+void modbus_slave_update(void);   //This function does all of the heavy lifting for modbus
+bool modbus_slave_comm_good(void);
 
 //internal functions:
 uint8_t* pop_packet();

@@ -1,6 +1,7 @@
 #include "modbus_interface.h"
 #include "modbus.h"
 
+/* Begin modbus slave library references */
 uint16_t timeout;
 
 Uart *RS485Port;
@@ -59,7 +60,9 @@ uint32_t get_elapsed_ms(void)
 	// Since the timer ticks 32000 times a second, divide by 32 to get ms
 	return elapsed_ms + ((REG_TC0_CV0) / 32);
 }
+/* End modbus slave library references */
 
+/* Begin node references */
 void modbus_init(int slave_id, Uart *port485, const uint32_t baud, Pio *enPinPort, const uint32_t enPin, const uint16_t serialTimeout)
 {
 	timeout = serialTimeout;
@@ -111,7 +114,6 @@ bool modbus_comm_good(void) {
 	return modbus_slave_comm_good();
 }
 
-
 // interrupt handler for incoming data
 void UART_Handler(void)
 {
@@ -147,3 +149,4 @@ void UART1_Handler()
 {
 	UART_Handler();
 }
+/* End node references */
