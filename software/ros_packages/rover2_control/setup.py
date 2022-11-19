@@ -22,7 +22,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'drive_control = rover2_control.drive_control:main'
+            'drive_control = rover2_control.drive_control:main',
+            'drive_coordinator = rover2_control.drive_coordinator:main'
         ],
     },
 )
