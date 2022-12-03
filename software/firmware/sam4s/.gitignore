@@ -1,0 +1,7 @@
+*/.vs
+*/Debug
+*/Release
+*/*.log
+*/*.config
+*/*.cat
+*/*.inf
