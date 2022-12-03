@@ -4,7 +4,7 @@
   <name>rover2_control</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="hakkilab@oregonstate.edu">root</maintainer>
+  <maintainer email="hakkilab@oregonstate.edu">hakkilab</maintainer>
   <license>TODO: License declaration</license>
 
   <exec_depend>rclpy</exec_depend>

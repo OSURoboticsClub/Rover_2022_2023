@@ -66,22 +66,22 @@ class DriveControl(Node):
     def __init__(self):
         super().__init__(NODE_NAME)
 
-        self.port = self.get_parameter_or("~port", DEFAULT_PORT)
-        self.baud = self.get_parameter_or("~baud", DEFAULT_BAUD)
+        self.port = self.declare_parameter("~port", DEFAULT_PORT).value
+        self.baud = self.declare_parameter("~baud", DEFAULT_BAUD).value
 
         print(self.port)
 
-        self.first_motor_id = self.get_parameter_or("~first_motor_id", FIRST_MOTOR_ID)
-        self.second_motor_id = self.get_parameter_or("~second_motor_id", SECOND_MOTOR_ID)
+        self.first_motor_id = self.declare_parameter("~first_motor_id", FIRST_MOTOR_ID).value
+        self.second_motor_id = self.declare_parameter("~second_motor_id", SECOND_MOTOR_ID).value
 
-        self.first_motor_inverted = self.get_parameter_or("~invert_first_motor", DEFAULT_INVERT)
-        self.second_motor_inverted = self.get_parameter_or("~invert_second_motor", DEFAULT_INVERT)
+        self.first_motor_inverted = self.declare_parameter("~invert_first_motor", DEFAULT_INVERT).value
+        self.second_motor_inverted = self.declare_parameter("~invert_second_motor", DEFAULT_INVERT).value
 
-        self.drive_control_subscriber_topic = self.get_parameter_or("~drive_control_topic", DEFAULT_DRIVE_CONTROL_TOPIC)
+        self.drive_control_subscriber_topic = self.declare_parameter("~drive_control_topic", DEFAULT_DRIVE_CONTROL_TOPIC).value
 
-        self.drive_control_status_topic = self.get_parameter_or("~drive_control_status_topic", DEFAULT_DRIVE_CONTROL_STATUS_TOPIC)
+        self.drive_control_status_topic = self.declare_parameter("~drive_control_status_topic", DEFAULT_DRIVE_CONTROL_STATUS_TOPIC).value
 
-        self.wait_time = 1.0 / self.get_parameter_or("~hertz", DEFAULT_HERTZ)
+        self.wait_time = 1.0 / self.declare_parameter("~hertz", DEFAULT_HERTZ).value
 
         self.first_motor = None
         self.second_motor = None
