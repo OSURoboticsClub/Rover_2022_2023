@@ -1,5 +1,5 @@
 #include <asf.h>
-#include "modbus_interface.h"
+#include "modbus_uart0.h"
 #include "gps.h"
 //#include "led_control.h"
 
@@ -7,9 +7,9 @@
 #define MODBUS_SLAVE_ID 1
 #define MODBUS_BPS 115200
 #define MODBUS_TIMEOUT 2000
-#define MODBUS_SER_PORT UART1
+#define MODBUS_SER_PORT UART0
 #define MODBUS_EN_PORT PIOA
-#define MODBUS_EN_PIN PIO_PA7
+#define MODBUS_EN_PIN PIO_PA8
 
 
 int main(void) {

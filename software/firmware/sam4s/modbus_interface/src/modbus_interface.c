@@ -139,17 +139,4 @@ void UART_Handler(void)
 		}
 	}
 }
-
-// Regardless of what UART port triggers the interrupt, the behavior is the same
-#pragma weak UART0_Handler
-void UART0_Handler()
-{
-	UART_Handler();
-}
-
-#pragma weak UART1_Handler
-void UART1_Handler()
-{
-	UART_Handler();
-}
 /* End node references */

@@ -23,4 +23,6 @@ void modbus_init(int, Uart*, const uint32_t, Pio*, const uint32_t, const uint16_
 void modbus_update(void);
 bool modbus_comm_good(void);
 
+void UART_Handler(void);
+
 #endif

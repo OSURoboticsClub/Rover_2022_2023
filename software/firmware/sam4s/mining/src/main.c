@@ -1,5 +1,5 @@
 #include <asf.h>
-#include "modbus_interface.h"
+#include "modbus_uart0.h"
 #include "stepper.h"
 
 #define STEPPER_PWM_CHANNEL PWM_CHANNEL_3

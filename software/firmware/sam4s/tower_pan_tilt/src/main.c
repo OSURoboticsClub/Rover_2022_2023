@@ -1,5 +1,5 @@
 #include <asf.h>
-#include "modbus_interface.h"
+#include "modbus_uart1.h"
 #include "servo.h"
 
 #define MODBUS_SLAVE_ID 2
