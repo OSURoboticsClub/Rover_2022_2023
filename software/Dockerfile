@@ -3,7 +3,7 @@ FROM osrf/ros:foxy-desktop
 RUN apt-get update && apt-get install -y \
 	ros-foxy-image-common ros-foxy-image-pipeline ros-foxy-image-transport-plugins \
 	ros-foxy-laser-geometry ros-foxy-perception-pcl ros-foxy-vision-opencv ros-foxy-ros-ign \
-	xauth nano socat xxd pip
+	ros-foxy-nmea-msgs xauth nano socat xxd pip
 
 RUN pip install numpy pyserial pynmea2 minimalmodbus
 
