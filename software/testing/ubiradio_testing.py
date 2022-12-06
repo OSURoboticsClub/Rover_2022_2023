@@ -57,7 +57,13 @@ while True:
     ground_tx_latency = output_json["tx_latency"]
     rover_tx_latency = output_json["remote"]["tx_latency"]
 
-    print successful_transmit_percent, " | ", quality, " | ", capacity, " | ", rx_rate, " | ", tx_rate, " | ", ground_tx_latency, " | ", rover_tx_latency
+    print(successful_transmit_percent, " | ", 
+          quality, " | ", 
+          capacity, " | ", 
+          rx_rate, " | ", 
+          tx_rate, " | ", 
+          ground_tx_latency, " | ", 
+          rover_tx_latency)
 
     time.sleep(0.25)
 # ssh_stdin, ssh_stdout, ssh_stderr = ssh.exec_command(set_wireless_frequency)

@@ -10,17 +10,17 @@ class RDFProceesor(object):
         self.new_data = False
         self.current_data = None
 
-        print self.sub
+        print(self.sub)
 
     def run(self):
         while True:
             if self.new_data:
-                print self.current_data
+                print(self.current_data)
                 self.new_data = False
             time.sleep(0.01)
 
     def on_rdf_data_received(self, rdf_data):
-        print rdf_data
+        print(rdf_data)
         self.current_data = rdf_data
         self.new_data = True
 

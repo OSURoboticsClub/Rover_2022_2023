@@ -19,4 +19,4 @@ for command in commands:
         sent = sock.sendto(command, server_address)
 
         data, server = sock.recvfrom(4096)
-        print data
+        print(data)

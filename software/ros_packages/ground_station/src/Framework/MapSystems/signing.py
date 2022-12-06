@@ -50,4 +50,4 @@ def sign_url(input_url=None, secret=None):
 if __name__ == "__main__":
   input_url = raw_input("URL to Sign: ")
   secret = raw_input("URL signing secret: ")
-  print "Signed URL: " + sign_url(input_url, secret)
+  print("Signed URL: " + sign_url(input_url, secret))

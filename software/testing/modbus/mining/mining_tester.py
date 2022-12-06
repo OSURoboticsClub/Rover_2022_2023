@@ -92,12 +92,12 @@ class MiningControl(object):
         self.initialize_mining_system()
         while True:
             try:
-                print self.mining_node.read_registers(0, 7)
+                print(self.mining_node.read_registers(0, 7))
                 self.mining_registers[MINING_MODBUS_REGISTERS["TILT_SET"]] = int(input("Enter new tilt value:"))
                 self.mining_node.write_registers(0, self.mining_registers)
 
-            except Exception, e:
-                print e
+            except Exception as error:
+                print(error)
 
     def connect_to_pan_tilt_and_tower(self):
         self.mining_node = minimalmodbus.Instrument(self.port, int(2))
@@ -114,15 +114,15 @@ class MiningControl(object):
             try:
                 self.mining_node.write_registers(0, self.mining_registers)
                 self.mining_registers = self.mining_node.read_registers(0, 7)
-            except Exception, e:
-                print "Had trouble communicating:", e
+            except Exception as error:
+                print("Had trouble communicating:", error)
 
         try:
             self.mining_registers[MINING_MODBUS_REGISTERS["TARE"]] = 1
             self.mining_node.write_registers(0, self.mining_registers)
             self.mining_registers[MINING_MODBUS_REGISTERS["TARE"]] = 0
-        except:
-            print "Had trouble communicating: no tare: ", e
+        except Exception as error:
+            print("Had trouble communicating: no tare: ", error)
 
 
 if __name__ == "__main__":
