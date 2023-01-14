@@ -120,8 +120,8 @@ class DriveCoordinator(Node):
         right_drive.first_motor_direction = bool(right_direction)
         right_drive.second_motor_direction = bool(right_direction)
 
-        left_speed = min(abs(left * UINT16_MAX), UINT16_MAX)
-        right_speed = min(abs(right * UINT16_MAX), UINT16_MAX)
+        left_speed = min(int(abs(left * UINT16_MAX)), UINT16_MAX)
+        right_speed = min(int(abs(right * UINT16_MAX)), UINT16_MAX)
 
         rear_drive.first_motor_speed = left_speed
         left_drive.first_motor_speed = left_speed
