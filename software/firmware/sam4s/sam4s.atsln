@@ -19,6 +19,8 @@ Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "battery_characterization", 
 EndProject
 Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "stepper_library", "stepper_library\stepper_library.cproj", "{EC39132A-5794-4099-90CC-B2500569C6F4}"
 EndProject
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "servo_library", "servo_library\servo_library.cproj", "{86D8716A-D194-4667-B112-54CA533F4740}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM
@@ -57,6 +59,10 @@ Global
 		{EC39132A-5794-4099-90CC-B2500569C6F4}.Debug|ARM.Build.0 = Debug|ARM
 		{EC39132A-5794-4099-90CC-B2500569C6F4}.Release|ARM.ActiveCfg = Release|ARM
 		{EC39132A-5794-4099-90CC-B2500569C6F4}.Release|ARM.Build.0 = Release|ARM
+		{86D8716A-D194-4667-B112-54CA533F4740}.Debug|ARM.ActiveCfg = Debug|ARM
+		{86D8716A-D194-4667-B112-54CA533F4740}.Debug|ARM.Build.0 = Debug|ARM
+		{86D8716A-D194-4667-B112-54CA533F4740}.Release|ARM.ActiveCfg = Release|ARM
+		{86D8716A-D194-4667-B112-54CA533F4740}.Release|ARM.Build.0 = Release|ARM
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
