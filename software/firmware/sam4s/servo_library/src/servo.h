@@ -5,12 +5,14 @@
 
 
 typedef struct servo_s {
+	// The PWM channel the servo is attached to
 	uint32_t pwm_channel_num;
 	pwm_channel_t pwm_channel;
-	unsigned position;
-	unsigned us_min;
-	unsigned us_max;
-	unsigned us_center;
+	
+	unsigned position;	// The current position of the servo (in us)
+	unsigned us_min;	// The minimum position the servo can be in (in us)
+	unsigned us_max;	// The maximum position the servo can be in (in us)
+	unsigned us_center; // The center position of the servo can be in (in us)
 } servo_s;
 
 
