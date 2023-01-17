@@ -32,7 +32,7 @@ void handle_pan_tilt(servo_s *pan_servo, servo_s *tilt_servo) {
 		servo_write_us(tilt_servo, tilt_servo->us_center);
 		
 		intRegisters[CENTER_ALL] = 0;
-		} else {
+	} else {
 		unsigned pan_pos = pan_servo->position + intRegisters[PAN_ADJUST_POSITIVE] - intRegisters[PAN_ADJUST_NEGATIVE];
 		unsigned tilt_pos = tilt_servo->position + intRegisters[TILT_ADJUST_POSITIVE] - intRegisters[TILT_ADJUST_NEGATIVE];
 		servo_write_us(pan_servo, pan_pos);
@@ -63,7 +63,7 @@ int main(void) {
 	
 	servo_write_us(&tilt_servo, tilt_min);
 	for (volatile uint32_t i = 0; i < (12000000) * 3; i++);
-	servo_write_us(&tilt_servo,tilt_center);
+	servo_write_us(&tilt_servo, tilt_center);
 	for (volatile uint32_t i = 0; i < (12000000) * 3; i++);
 	servo_write_us(&tilt_servo, tilt_max);
 	for (volatile uint32_t i = 0; i < (12000000) * 3; i++);
