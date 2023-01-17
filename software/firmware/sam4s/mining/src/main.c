@@ -9,30 +9,18 @@
 #define STEPPER_STEP_PIN PIO_PA7
 
 
-#define LSw1_PORT				PIOA
-#define LSw1_PIN				PIO_PA0
+#define GPIO_PORT PIOA
 
-#define LSw2_PORT				PIOA
-#define LSw2_PIN				PIO_PA1
+#define LSW1_PIN				PIO_PA0
+#define LSW2_PIN				PIO_PA1
+#define LSW3_PIN				PIO_PA2
+#define LSW4_PIN				PIO_PA3
 
-#define LSw3_PORT				PIOA
-#define LSw3_PIN				PIO_PA2
-
-#define LSw4_PORT				PIOA
-#define LSw4_PIN				PIO_PA3
-
-#define Lazer_PORT				PIOA
-#define Lazer_PIN				PIO_PA13
-
-#define vidSel0_PORT			PIOA
-#define vidSel0_PIN				PIO_PA14
-
-#define vidSel1_PORT			PIOA
-#define vidSel1_PIN				PIO_PA15
+#define LAZER_PIN				PIO_PA13
+#define VID_SEL0_PIN			PIO_PA14
+#define VID_SEL1_PIN			PIO_PA15
 
 // modbus settings
-#define SLAVEID 15
-
 #define MODBUS_SLAVE_ID 15
 #define MODBUS_BPS 115200
 #define MODBUS_TIMEOUT 2000
@@ -40,29 +28,30 @@
 #define MODBUS_EN_PORT PIOA
 #define MODBUS_EN_PIN PIO_PA11
 
-//int Registers
-#define stepperPosition 1
-#define cameraSelect 2
-#define lazerEnable 3
-#define limSw1	4
-#define limSw2	5
-#define limSw3	6
-#define limSw4	7
+enum MODBUS_REGISTERS {
+	STEPPER_POSITION = 1,
+	CAMERA_SELECT = 2,
+	LAZER_EN = 3,
+	LIM_SW1 = 4,
+	LIM_SW2 = 5,
+	LIM_SW3 = 6,
+	LIM_SW4 = 7
+};
 
-int steps_per_rev = 465;
+//int steps_per_rev = 465;
 
 void board_setup(void) {
-	pmc_enable_periph_clk(ID_PIOA);			//This enables GPIO Outpus, (necessary)
+	pmc_enable_periph_clk(ID_PIOA);			//This enables GPIO Output, (necessary)
 	pmc_enable_periph_clk(ID_PIOB);
 	
-	pio_set_input(LSw1_PORT,LSw1_PIN,PIO_DEBOUNCE);
-	pio_set_input(LSw2_PORT,LSw2_PIN,PIO_DEBOUNCE);
-	pio_set_input(LSw3_PORT,LSw3_PIN,PIO_DEBOUNCE);
-	pio_set_input(LSw4_PORT,LSw4_PIN,PIO_DEBOUNCE);
+	pio_set_input(GPIO_PORT, LSW1_PIN, PIO_DEBOUNCE);
+	pio_set_input(GPIO_PORT, LSW2_PIN, PIO_DEBOUNCE);
+	pio_set_input(GPIO_PORT, LSW3_PIN, PIO_DEBOUNCE);
+	pio_set_input(GPIO_PORT, LSW4_PIN, PIO_DEBOUNCE);
 	
-	pio_set_output(Lazer_PORT,Lazer_PIN,LOW,DISABLE,DISABLE);
-	pio_set_output(vidSel0_PORT,vidSel0_PIN,LOW,DISABLE,DISABLE);
-	pio_set_output(vidSel1_PORT,vidSel1_PIN,LOW,DISABLE,DISABLE);
+	pio_set_output(GPIO_PORT, LAZER_PIN, LOW, DISABLE, DISABLE);
+	pio_set_output(GPIO_PORT, VID_SEL0_PIN, LOW, DISABLE, DISABLE);
+	pio_set_output(GPIO_PORT, VID_SEL1_PIN, LOW, DISABLE, DISABLE);
 }
 
 int main(void) {
@@ -74,28 +63,29 @@ int main(void) {
 	stepper_s stepper;
 	stepper_setup(&stepper, STEPPER_PWM_CHANNEL, STEPPER_DIR_PORT, STEPPER_DIR_PIN, STEPPER_STEP_PORT, STEPPER_STEP_PIN);
 
-	// Some tests for now switching between frequencies.
-	//stepper_set_position(&stepper, 465);
-	//for (volatile uint32_t i = 0; i < (12000000) * 3; i++);
-	//stepper_set_velocity(&stepper, 10, STEPPER_DIR_CCW);
-	//for (volatile uint32_t i = 0; i < (12000000) * 3; i++);
-	//stepper_stop(&stepper);
-
 	while (1) {
 		modbus_update();
 
-		if(stepper.position != intRegisters[stepperPosition]) stepper_set_position(&stepper, intRegisters[stepperPosition]);	//If the position needs to change, change it.
+		if(stepper.position != intRegisters[STEPPER_POSITION]) {
+			stepper_set_position(&stepper, intRegisters[STEPPER_POSITION]);	//If the position needs to change, change it.
+		}
 		
-		intRegisters[limSw1] = pio_get(LSw1_PORT,PIO_TYPE_PIO_INPUT,LSw1_PIN);
-		intRegisters[limSw2] = pio_get(LSw2_PORT,PIO_TYPE_PIO_INPUT,LSw2_PIN);
-		intRegisters[limSw3] = pio_get(LSw3_PORT,PIO_TYPE_PIO_INPUT,LSw3_PIN);
-		intRegisters[limSw4] = pio_get(LSw4_PORT,PIO_TYPE_PIO_INPUT,LSw4_PIN);
+		intRegisters[LIM_SW1] = pio_get(GPIO_PORT, PIO_TYPE_PIO_INPUT, LSW1_PIN);
+		intRegisters[LIM_SW2] = pio_get(GPIO_PORT, PIO_TYPE_PIO_INPUT, LSW2_PIN);
+		intRegisters[LIM_SW3] = pio_get(GPIO_PORT, PIO_TYPE_PIO_INPUT, LSW3_PIN);
+		intRegisters[LIM_SW4] = pio_get(GPIO_PORT, PIO_TYPE_PIO_INPUT, LSW4_PIN);
 		
-		if(intRegisters[lazerEnable]) pio_set(Lazer_PORT, Lazer_PIN);
-		else pio_clear(Lazer_PORT, Lazer_PIN);
+		if(intRegisters[LAZER_EN]) {
+			pio_set(GPIO_PORT, LAZER_PIN);
+		} else{
+			pio_clear(GPIO_PORT, LAZER_PIN);
+		}
 		
 		
-		if(intRegisters[cameraSelect]) pio_set(vidSel0_PORT, vidSel0_PIN);				//This is the only video select pin that matters
-		else pio_clear(vidSel0_PORT, vidSel0_PIN);
+		if(intRegisters[CAMERA_SELECT]) {
+			pio_set(GPIO_PORT, VID_SEL0_PIN);				//This is the only video select pin that matters
+		} else {
+			pio_clear(GPIO_PORT, VID_SEL1_PIN);
+		}
 	}
 }
