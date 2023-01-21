@@ -1,6 +1,6 @@
 import struct
 import serial
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Dict
 
 # Constants
 _WRITE_INSTR = 16
@@ -21,31 +21,44 @@ _REG_MAX = 1023
 
 _MAX_DATA_BYTES = 255
 
-class Node:
+_serialports: Dict[str, serial.Serial] = {}
+
+class Instrument:
     """Represents a slave
     """
     def __init__(
         self,
         port: str,
         slave_id: int,
-        baudrate: int = 9600
+        baudrate: int = 19200
     ) -> None:
         """Opens serial comms with a node and assigns it a slave id
         """
         self.slave_id = slave_id
         self.port = port
-        self.serial = serial.Serial(port, baudrate, timeout=1)
+        self.serial = None
 
-    def write(
+        try:
+            if port not in _serialports or not _serialports[port]:
+                self.serial = _serialports[port] = serial.Serial(port, baudrate,
+                                                                timeout=1)
+            else:
+                self.serial = _serialports[port]
+        except serial.SerialException:
+            print(f"Unable to open {port} for serial communications.")
+
+    def write_registers(
         self,
         register_addr: int,
         values: List[Any]
     ) -> None:
         """Write a list of values starting at register_addr
         """
+        if not self.serial:
+            return
 
         if not _is_valid_write_data(register_addr, values):
-            print("Attempted to write bad data.")
+            print("Attempted to write invalid data.")
             return
 
         num_bytes = _calculate_num_bytes(values)
@@ -85,13 +98,16 @@ class Node:
         if not _check_crc(resp, crc):
             print("Write response CRC check failed.")
 
-    def read(
+    def read_registers(
         self,
         register_addr: int,
         num_registers: int
     ) -> List[Any]:
         """Read num_registers starting at register_addr
         """
+        if not self.serial:
+            return []
+        
         # The beginning of all read packets
         header = [
             self.slave_id,
@@ -141,7 +157,24 @@ class Node:
             print("Read response CRC check failed.")
             return []
         return data[0:-1]  # Return data byte values (minus CRC)
+    
+    def write_register(
+        self,
+        register_addr: int,
+        value: Any
+    ) -> None:
+        """Write a value to register at register_addr
+        """
+        self.write_registers(register_addr, [value])
 
+    def read_register(
+        self,
+        register_addr: int,
+    ) -> Any:
+        """Read register at register_addr
+        """
+        res = self.read_registers(register_addr, 1)
+        return res[0] if res else None
 
 def _create_byte_string(values: List[Any]) -> str:
     """Convert a list of values into a byte string
@@ -194,7 +227,7 @@ def _calculate_resp_size(instr: int, num_bytes: int = 0) -> int:
 
 
 def _calculate_crc(packet: bytes) -> int:
-    """Calculates the CRC for a list of values
+    """Calculates the CRC for a list of values (BLACK MAGIC)
     """
     crc = 0xffff
     for i in range(len(packet)):
@@ -327,18 +360,23 @@ def _calc_num_types(
     return num_ints, num_floats, num_chars, num_bools
 
 
+def _reg_in_range(addr: int, start: int, end: int) -> bool:
+    """Checks whether a given register address falls within the range provided (end exclusive)
+    """
+    return addr >= start and addr < end
+
+
 def _is_valid_write_data (
-    register_addr: int,
+    reg_addr: int,
     values: list[Any]
 ) -> bool:
-
-    if register_addr < _INT_REG_OFFSET or register_addr >= _REG_MAX:
-        print ('start or end register out of bounds')
+    """Checks that the type of the given list of values matches the registers
+    """
+    if reg_addr < _INT_REG_OFFSET or reg_addr >= _REG_MAX:
         return False
 
     # there has to be a better way, but I dont know it right now
-    for v in values:
-
+    """     for v in values:
         if register_addr >= _INT_REG_OFFSET and register_addr < _FLOAT_REG_OFFSET and isinstance (v, int):
             pass
 
@@ -351,10 +389,19 @@ def _is_valid_write_data (
         elif register_addr >= _BOOL_REG_OFFSET and register_addr < _REG_MAX and isinstance (v, bool):
             pass
         
-        else :
-            print ('write data type order invalid')
+        else:
             return False
         
-        register_addr = register_addr + 1
+        register_addr += 1
+
+    return True """
+
+    for v in values:
+        if    ((_reg_in_range(reg_addr, _INT_REG_OFFSET, _FLOAT_REG_OFFSET) and not isinstance(v, int))
+            or (_reg_in_range(reg_addr, _FLOAT_REG_OFFSET, _CHAR_REG_OFFSET) and not isinstance(v, float))
+            or (_reg_in_range(reg_addr, _CHAR_REG_OFFSET, _BOOL_REG_OFFSET) and (not isinstance(v, str) or len(v) > 1))
+            or (_reg_in_range(reg_addr, _BOOL_REG_OFFSET, _REG_MAX) and not isinstance(v, bool))):
+            return False
+        reg_addr += 1
 
     return True
