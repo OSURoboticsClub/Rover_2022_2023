@@ -67,11 +67,11 @@ int main(void) {
 	servo_s tilt_servo;
 	//servo_s hitch_servo;
 	
-	servo_setup(&pan_servo, PWM_CHANNEL_1, pan_min, pan_max, pan_center);
+	servo_setup(&pan_servo, PWM_CHANNEL_0, pan_min, pan_max, pan_center);
 	
 	// Since the thing can do like 8 revolutions, restrict range to only 1 revolution
 	// Not tested, possible the servo needs some physical adjustment
-	servo_setup(&tilt_servo, PWM_CHANNEL_2, tilt_min, tilt_max, tilt_center);
+	servo_setup(&tilt_servo, PWM_CHANNEL_1, tilt_min, tilt_max, tilt_center);
 	
 	// Test code
 	servo_write_us(&tilt_servo, tilt_min);
