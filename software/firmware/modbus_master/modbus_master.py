@@ -45,12 +45,13 @@ class Node:
         """
 
         if not _is_valid_write_data(register_addr, values):
+            print("Attempted to write bad data.")
             return
 
         num_bytes = _calculate_num_bytes(values)
 
         if num_bytes > _MAX_DATA_BYTES:
-            print("Write command would have sent over 255 data bytes")
+            print(f"Write command would have sent over {_MAX_DATA_BYTES} data bytes.")
             return
 
         # The beginning of all write packets
@@ -75,10 +76,14 @@ class Node:
         self.serial.write(packet)
         resp = self.serial.read(_calculate_resp_size(_WRITE_INSTR))
 
+        if not resp:
+            print("Write received no response.")
+            return
+
         # Do a CRC check (probably not necessary since this is just discarded)
         crc = resp[-2] << 8 | resp[-1]
         if not _check_crc(resp, crc):
-            print('Write response CRC check failed.')
+            print("Write response CRC check failed.")
 
     def read(
         self,
@@ -114,8 +119,8 @@ class Node:
         num_bytes += (num_bools * _BOOL_REG_BYTE_SZ)
 
         if num_bytes > _MAX_DATA_BYTES:
-            print("Read command requested over 255 data bytes")
-            return
+            print(f"Read command requested over {_MAX_DATA_BYTES} data bytes.")
+            return []
 
         # Send the instruction to slave, then read its response
         self.serial.write(packet)
@@ -123,6 +128,7 @@ class Node:
 
         # Don't continue if no response
         if not resp:
+            print("Read received no response.")
             return []
 
         # Convert the data bytes (including CRC) of the response bytestring
@@ -132,8 +138,8 @@ class Node:
         # Perform a CRC check and if it fails, don't return any values
         crc = data[-1]
         if not _check_crc(resp, crc):
-            print('Read response CRC check failed.')
-            return None
+            print("Read response CRC check failed.")
+            return []
         return data[0:-1]  # Return data byte values (minus CRC)
 
 
@@ -223,7 +229,12 @@ def _pack(formatstring: str, value: Any) -> str:
     return str(struct.pack(formatstring, value), encoding='latin1')
 
 
-def _unpack(resp: bytes, register_addr: int, num_registers: int, skip_header: bool = True) -> List[Any]:
+def _unpack(
+        resp: bytes,
+        register_addr: int,
+        num_registers: int,
+        skip_header: bool = True
+) -> List[Any]:
     """Given a response byte string, unpacks it into a list of values
     """
     # Get the number of each register type in the packet
