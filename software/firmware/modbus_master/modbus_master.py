@@ -20,6 +20,7 @@ _BOOL_REG_OFFSET = 768
 _REG_MAX = 1023
 
 _MAX_DATA_BYTES = 255
+_INT_MAX = 65536
 
 _serialports: Dict[str, serial.Serial] = {}
 
@@ -184,7 +185,7 @@ def _create_byte_string(values: List[Any]) -> str:
         if isinstance(v, bool):  # Bool must come before int
             bstr += _pack('>?', v)
         elif isinstance(v, int):
-            bstr += _pack('>H', v)
+            bstr += _pack('>H', v % _INT_MAX)
         elif isinstance(v, float):
             bstr += _pack('>f', v)
         elif isinstance(v, str):  # Would probably act weird if v is >1 char
@@ -375,29 +376,8 @@ def _is_valid_write_data (
     if reg_addr < _INT_REG_OFFSET or reg_addr >= _REG_MAX:
         return False
 
-    # there has to be a better way, but I dont know it right now
-    """     for v in values:
-        if register_addr >= _INT_REG_OFFSET and register_addr < _FLOAT_REG_OFFSET and isinstance (v, int):
-            pass
-
-        elif register_addr >= _FLOAT_REG_OFFSET and register_addr < _CHAR_REG_OFFSET and isinstance (v, float):
-            pass
-
-        elif register_addr >= _CHAR_REG_OFFSET and register_addr < _BOOL_REG_OFFSET and isinstance (v, str) and len(v) == 1:
-            pass
-
-        elif register_addr >= _BOOL_REG_OFFSET and register_addr < _REG_MAX and isinstance (v, bool):
-            pass
-        
-        else:
-            return False
-        
-        register_addr += 1
-
-    return True """
-
     for v in values:
-        if    ((_reg_in_range(reg_addr, _INT_REG_OFFSET, _FLOAT_REG_OFFSET) and not isinstance(v, int))
+        if    ((_reg_in_range(reg_addr, _INT_REG_OFFSET, _FLOAT_REG_OFFSET) and (isinstance(v, bool) or not isinstance(v, int)))
             or (_reg_in_range(reg_addr, _FLOAT_REG_OFFSET, _CHAR_REG_OFFSET) and not isinstance(v, float))
             or (_reg_in_range(reg_addr, _CHAR_REG_OFFSET, _BOOL_REG_OFFSET) and (not isinstance(v, str) or len(v) > 1))
             or (_reg_in_range(reg_addr, _BOOL_REG_OFFSET, _REG_MAX) and not isinstance(v, bool))):
