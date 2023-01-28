@@ -34,7 +34,7 @@ void handle_pan_tilt(servo_s *pan_servo, servo_s *tilt_servo) {
 		servo_write_us(tilt_servo, tilt_servo->us_center);
 		
 		intRegisters[CENTER_ALL] = 0;
-		} else {
+	} else {
 		unsigned pan_pos = pan_servo->position - intRegisters[PAN_ADJUST_POSITIVE] + intRegisters[PAN_ADJUST_NEGATIVE];
 		unsigned tilt_pos = tilt_servo->position + intRegisters[TILT_ADJUST_POSITIVE] - intRegisters[TILT_ADJUST_NEGATIVE];
 		servo_write_us(pan_servo, pan_pos);
@@ -50,7 +50,7 @@ void handle_pan_tilt(servo_s *pan_servo, servo_s *tilt_servo) {
 void handle_hitch(servo_s *hitch_servo) {
 	if (intRegisters[HITCH_SERVO_POSITIVE]) {
 		servo_write_angle(hitch_servo, 60);
-		} else if (intRegisters[HITCH_SERVO_NEGATIVE]) {
+	} else if (intRegisters[HITCH_SERVO_NEGATIVE]) {
 		servo_write_angle(hitch_servo, 120);
 	}
 }
@@ -73,6 +73,12 @@ int main(void) {
 	// Not tested, possible the servo needs some physical adjustment
 	servo_setup(&tilt_servo, PWM_CHANNEL_1, tilt_min, tilt_max, tilt_center);
 	
+	// Test code
+	servo_write_us(&tilt_servo, tilt_min);
+	for (volatile uint32_t i = 0; i < (12000000) * 3; i++);
+	servo_write_us(&tilt_servo, tilt_center);
+	for (volatile uint32_t i = 0; i < (12000000) * 3; i++);
+	servo_write_us(&tilt_servo, tilt_max);
 	
 	while (1) {
 		modbus_update();

@@ -238,6 +238,7 @@
       <Value>../src/ASF/common/services/clock</Value>
       <Value>../src/ASF/sam/drivers/pio</Value>
       <Value>../src/ASF/sam/drivers/pwm</Value>
+      <Value>../../servo_library/src</Value>
     </ListValues>
   </armgcc.compiler.directories.IncludePaths>
   <armgcc.compiler.optimization.level>Optimize for size (-Os)</armgcc.compiler.optimization.level>
@@ -334,9 +335,9 @@
       <Value>../../modbus_interface/src</Value>
       <Value>../src/ASF/sam/drivers/pmc</Value>
       <Value>../src/ASF/common/services/clock</Value>
-      <Value>../src/servo</Value>
       <Value>../src/ASF/sam/drivers/pio</Value>
       <Value>../src/ASF/sam/drivers/pwm</Value>
+      <Value>../../servo_library/src</Value>
     </ListValues>
   </armgcc.compiler.directories.IncludePaths>
   <armgcc.compiler.optimization.level>Optimize (-O1)</armgcc.compiler.optimization.level>
@@ -444,7 +445,6 @@
     <Folder Include="src\ASF\thirdparty\CMSIS\Lib\" />
     <Folder Include="src\ASF\thirdparty\CMSIS\Lib\GCC\" />
     <Folder Include="src\config\" />
-    <Folder Include="src\servo" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="src\ASF\sam\drivers\pio\pio.c">
@@ -465,12 +465,6 @@
     <None Include="src\ASF\sam\drivers\pwm\pwm.h">
       <SubType>compile</SubType>
     </None>
-    <Compile Include="src\servo\servo.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="src\servo\servo.h">
-      <SubType>compile</SubType>
-    </Compile>
     <None Include="src\config\conf_clock.h">
       <SubType>compile</SubType>
     </None>
@@ -905,6 +899,11 @@
     <ProjectReference Include="..\modbus_interface\modbus_interface.cproj">
       <Name>modbus_interface</Name>
       <Project>{dce6c7e3-ee26-4d79-826b-08594b9ad897}</Project>
+      <Private>True</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\servo_library\servo_library.cproj">
+      <Name>servo_library</Name>
+      <Project>{86d8716a-d194-4667-b112-54ca533f4740}</Project>
       <Private>True</Private>
     </ProjectReference>
   </ItemGroup>
