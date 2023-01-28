@@ -60,6 +60,24 @@ def generate_launch_description():
         ),
         Node(
             package='rover2_control',
+            executable='drive_coordinator',
+            name='drive_coordinator',
+            **config
+        ),
+        Node(
+            package='rover2_control',
+            executable='tower_and_pan_tilt_control',
+            name='tower_and_pan_tilt',
+            **config
+        ),
+        Node(
+            package='rover2_control',
+            executable='chassis_pan_tilt_control',
+            name='chassis_pan_tilt',
+            **config
+        ),
+        Node(
+            package='rover2_control',
             executable='effectors_control',
             name='effectors',
             **config
