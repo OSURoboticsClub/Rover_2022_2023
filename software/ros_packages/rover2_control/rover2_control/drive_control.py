@@ -66,22 +66,22 @@ class DriveControl(Node):
     def __init__(self):
         super().__init__(NODE_NAME)
 
-        self.port = self.get_parameter_or("~port", DEFAULT_PORT)
-        self.baud = self.get_parameter_or("~baud", DEFAULT_BAUD)
+        self.port = self.declare_parameter("~port", DEFAULT_PORT).value
+        self.baud = self.declare_parameter("~baud", DEFAULT_BAUD).value
 
         print(self.port)
 
-        self.first_motor_id = self.get_parameter_or("~first_motor_id", FIRST_MOTOR_ID)
-        self.second_motor_id = self.get_parameter_or("~second_motor_id", SECOND_MOTOR_ID)
+        self.first_motor_id = self.declare_parameter("~first_motor_id", FIRST_MOTOR_ID).value
+        self.second_motor_id = self.declare_parameter("~second_motor_id", SECOND_MOTOR_ID).value
 
-        self.first_motor_inverted = self.get_parameter_or("~invert_first_motor", DEFAULT_INVERT)
-        self.second_motor_inverted = self.get_parameter_or("~invert_second_motor", DEFAULT_INVERT)
+        self.first_motor_inverted = self.declare_parameter("~invert_first_motor", DEFAULT_INVERT).value
+        self.second_motor_inverted = self.declare_parameter("~invert_second_motor", DEFAULT_INVERT).value
 
-        self.drive_control_subscriber_topic = self.get_parameter_or("~drive_control_topic", DEFAULT_DRIVE_CONTROL_TOPIC)
+        self.drive_control_subscriber_topic = self.declare_parameter("~drive_control_topic", DEFAULT_DRIVE_CONTROL_TOPIC).value
 
-        self.drive_control_status_topic = self.get_parameter_or("~drive_control_status_topic", DEFAULT_DRIVE_CONTROL_STATUS_TOPIC)
+        self.drive_control_status_topic = self.declare_parameter("~drive_control_status_topic", DEFAULT_DRIVE_CONTROL_STATUS_TOPIC).value
 
-        self.wait_time = 1.0 / self.get_parameter_or("~hertz", DEFAULT_HERTZ)
+        self.wait_time = 1.0 / self.declare_parameter("~hertz", DEFAULT_HERTZ).value
 
         self.first_motor = None
         self.second_motor = None
@@ -93,12 +93,9 @@ class DriveControl(Node):
 
         self.drive_control_status_publisher = self.create_publisher(DriveStatusMessage, self.drive_control_status_topic, 1)
 
-        self.drive_control_message = DriveControlMessage()
-        self.new_control_message = False
-
         self.bogie_last_seen = time()
 
-        self.run()
+        self.timer = self.create_timer(self.wait_time, self.get_drive_status)
 
     def __setup_minimalmodbus_for_485(self):
         self.first_motor.serial = serial.rs485.RS485(self.port, baudrate=self.baud, timeout=COMMUNICATIONS_TIMEOUT)
@@ -111,54 +108,29 @@ class DriveControl(Node):
                                                                          delay_before_rx=RX_DELAY,
                                                                          delay_before_tx=TX_DELAY)
 
-    def run(self):
-        # Note: perhaps an Executor is needed
-        # https://docs.ros2.org/foxy/api/rclpy/api/execution_and_callbacks.html#rclpy.executors.Executor
-        while rclpy.ok():
-            start_time = time()
-
-            try:
-                self.send_drive_control_message()
-                self.get_drive_status()
-
-            except Exception as error:
-                pass
-
-            if (time() - self.bogie_last_seen) > BOGIE_LAST_SEEN_TIMEOUT:
-                print(f"Bogie not seen for {BOGIE_LAST_SEEN_TIMEOUT} seconds. Exiting.")
-                return  # Exit so respawn can take over
-
-            time_diff = time() - start_time
-
-            sleep(max(self.wait_time - time_diff, 0))
-
     def connect_to_bogie(self):
         self.first_motor = minimalmodbus.Instrument(self.port, int(self.first_motor_id))
         self.second_motor = minimalmodbus.Instrument(self.port, int(self.second_motor_id))
         self.__setup_minimalmodbus_for_485()
 
-    def send_drive_control_message(self):
-        if self.new_control_message:
-            drive_control = self.drive_control_message
-            try:
-                first_motor_register_data = list(MOTOR_DRIVER_DEFAULT_MESSAGE)
-                first_direction = \
-                    not drive_control.first_motor_direction if self.first_motor_inverted else drive_control.first_motor_direction
-                first_motor_register_data[MODBUS_REGISTERS["DIRECTION"]] = first_direction
-                first_motor_register_data[MODBUS_REGISTERS["SPEED"]] = min(drive_control.first_motor_speed, UINT16_MAX)
+    def drive_control_callback(self, drive_control):
+        try:
+            first_motor_register_data = list(MOTOR_DRIVER_DEFAULT_MESSAGE)
+            first_direction = \
+                not drive_control.first_motor_direction if self.first_motor_inverted else drive_control.first_motor_direction
+            first_motor_register_data[MODBUS_REGISTERS["DIRECTION"]] = first_direction
+            first_motor_register_data[MODBUS_REGISTERS["SPEED"]] = min(drive_control.first_motor_speed, UINT16_MAX)
 
-                second_motor_register_data = list(MOTOR_DRIVER_DEFAULT_MESSAGE)
-                second_direction = not drive_control.second_motor_direction if self.second_motor_inverted else drive_control.second_motor_direction
-                second_motor_register_data[MODBUS_REGISTERS["DIRECTION"]] = second_direction
-                second_motor_register_data[MODBUS_REGISTERS["SPEED"]] = min(drive_control.second_motor_speed, UINT16_MAX)
+            second_motor_register_data = list(MOTOR_DRIVER_DEFAULT_MESSAGE)
+            second_direction = not drive_control.second_motor_direction if self.second_motor_inverted else drive_control.second_motor_direction
+            second_motor_register_data[MODBUS_REGISTERS["DIRECTION"]] = second_direction
+            second_motor_register_data[MODBUS_REGISTERS["SPEED"]] = min(drive_control.second_motor_speed, UINT16_MAX)
 
-                self.first_motor.write_registers(0, first_motor_register_data)
-                self.second_motor.write_registers(0, second_motor_register_data)
+            self.first_motor.write_registers(0, first_motor_register_data)
+            self.second_motor.write_registers(0, second_motor_register_data)
 
-            except Exception as error:
-                pass
-
-            self.new_control_message = False
+        except Exception as error:
+            pass
 
     def get_drive_status(self):
         status = DriveStatusMessage()
@@ -181,21 +153,22 @@ class DriveControl(Node):
         if status.first_motor_connected or status.second_motor_connected:
             self.bogie_last_seen = time()
 
+        if (time() - self.bogie_last_seen) > BOGIE_LAST_SEEN_TIMEOUT:
+            print(f"Bogie not seen for {BOGIE_LAST_SEEN_TIMEOUT} seconds. Exiting.")
+            self.destroy_node()
+            return  # Exit so respawn can take over
+
         if status.first_motor_connected:
             status.first_motor_current = first_motor_status[0] / 1000.0
-            status.first_motor_fault = first_motor_status[1]
+            status.first_motor_fault = first_motor_status[1] != 0
             status.first_motor_temp = first_motor_status[2] / 1000.0
 
         if status.second_motor_connected:
             status.second_motor_current = second_motor_status[0] / 1000.0
-            status.second_motor_fault = second_motor_status[1]
+            status.second_motor_fault = second_motor_status[1] != 0
             status.second_motor_temp = second_motor_status[2] / 1000.0
 
         self.drive_control_status_publisher.publish(status)
-
-    def drive_control_callback(self, drive_control):
-        self.drive_control_message = drive_control
-        self.new_control_message = True
 
 
 def main(args=None):
