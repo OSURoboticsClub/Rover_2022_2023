@@ -3,17 +3,17 @@
 # Imports
 #####################################
 # Python native imports
-import rclpy
-from rclpy.node import Node 
+import rospy
+
 from time import time, sleep
 
 import serial.rs485
 import minimalmodbus
 
-from std_msgs.msg import UInt8, UInt16 
+from std_msgs.msg import UInt8, UInt16
 
 # Custom Imports
-from rover_control.msg import TowerPanTiltControlMessage #Change to new rover control cmake
+from rover_control.msg import TowerPanTiltControlMessage
 
 #####################################
 # Global Variables
@@ -83,38 +83,39 @@ NODE_LAST_SEEN_TIMEOUT = 2  # seconds
 #####################################
 # DriveControl Class Definition
 #####################################
-class TowerPanTiltControl(Node):
+class TowerPanTiltControl(object):
     def __init__(self):
-        super().__init__(NODE_NAME)
-        self.port = self.get_parameter_or("~port", DEFAULT_PORT)
-        self.baud = self.get_parameter_or("~baud", DEFAULT_BAUD)
+        rospy.init_node(NODE_NAME)
 
-        self.tower_node_id = self.get_parameter_or("~tower_node_id", TOWER_NODE_ID)
-        self.pan_tilt_node_id = self.get_parameter_or("~pan_tilt_node_id", PAN_TILT_NODE_ID)
+        self.port = rospy.get_param("~port", DEFAULT_PORT)
+        self.baud = rospy.get_param("~baud", DEFAULT_BAUD)
 
-        self.tower_light_control_subscriber_topic = self.get_parameter_or("~tower_light_control_topic",
+        self.tower_node_id = rospy.get_param("~tower_node_id", TOWER_NODE_ID)
+        self.pan_tilt_node_id = rospy.get_param("~pan_tilt_node_id", PAN_TILT_NODE_ID)
+
+        self.tower_light_control_subscriber_topic = rospy.get_param("~tower_light_control_topic",
                                                                     DEFAULT_TOWER_LIGHT_CONTROL_TOPIC)
-        self.pan_tilt_control_subscriber_topic = self.get_parameter_or("~pan_tilt_control_topic",
+        self.pan_tilt_control_subscriber_topic = rospy.get_param("~pan_tilt_control_topic",
                                                                  DEFAULT_PAN_TILT_CONTROL_TOPIC)
 
-        self.tower_co2_publisher_topic = self.get_parameter_or("~tower_co2_status_topic",
+        self.tower_co2_publisher_topic = rospy.get_param("~tower_co2_status_topic",
                                                          DEFAULT_TOWER_CO2_STATUS_TOPIC)
 
-        self.wait_time = 1.0 / self.get_parameter_or("~hertz", DEFAULT_HERTZ)
+        self.wait_time = 1.0 / rospy.get_param("~hertz", DEFAULT_HERTZ)
 
         self.pan_tilt_node = None
         self.tower_node = None
 
         self.connect_to_pan_tilt_and_tower()
 
-        self.pan_tilt_control_subscriber = self.create_subscriber(TowerPanTiltControlMessage,
-                                                                self.pan_tilt_control_subscriber_topic,
+        self.pan_tilt_control_subscriber = rospy.Subscriber(self.pan_tilt_control_subscriber_topic,
+                                                            TowerPanTiltControlMessage,
                                                             self.pan_tilt_control_callback)
 
-        self.tower_light_control_subscriber = self.create_subscriber(UInt8, self.tower_light_control_subscriber_topic,
+        self.tower_light_control_subscriber = rospy.Subscriber(self.tower_light_control_subscriber_topic, UInt8,
                                                                self.tower_light_control_callback)
 
-        self.tower_co2_publisher = self.create_publisher(UInt16, self.tower_co2_publisher_topic, queue_size=1)
+        self.tower_co2_publisher = rospy.Publisher(self.tower_co2_publisher_topic, UInt16, queue_size=1)
 
         self.pan_tilt_control_message = None
         self.tower_light_control_message = None
@@ -136,15 +137,14 @@ class TowerPanTiltControl(Node):
     def run(self):
         self.send_startup_centering_and_lights_off_command()
 
-        #while not rospy.is_shutdown():
-        while rclpy.ok():     #?
+        while not rospy.is_shutdown():
             start_time = time()
 
             try:
                 self.send_pan_tilt_control_message()
                 self.modbus_nodes_seen_time = time()
 
-            except Exception as error:
+            except Exception, error:
                 pass
                 # print "Error occurred:", error
 
@@ -153,12 +153,12 @@ class TowerPanTiltControl(Node):
                 self.broadcast_co2_reading_message()
                 self.modbus_nodes_seen_time = time()
 
-            except Exception as error:
+            except Exception, error:
                 pass
                 # print "Error occurred:", error
 
             if (time() - self.modbus_nodes_seen_time) > NODE_LAST_SEEN_TIMEOUT:
-                print("Tower pan/tilt not seen for", NODE_LAST_SEEN_TIMEOUT, "seconds. Exiting.")
+                print "Tower pan/tilt not seen for", NODE_LAST_SEEN_TIMEOUT, "seconds. Exiting."
                 return  # Exit so respawn can take over
 
             time_diff = time() - start_time
