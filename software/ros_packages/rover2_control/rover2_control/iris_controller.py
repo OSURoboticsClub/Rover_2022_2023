@@ -3,7 +3,6 @@
 # Imports
 #####################################
 # Python native imports
-#import rospy
 import rclpy
 from rclpy.node import Node
 
@@ -12,16 +11,14 @@ from time import time, sleep
 import serial.rs485
 import minimalmodbus
 
-# Custom Imports    
+# Custom Imports
 from rover2_control_interface.msg import DriveCommandMessage, IrisStatusMessage
-#from rover_control.msg import DriveCommandMessage, IrisStatusMessage
 
 #####################################
 # Global Variables
 #####################################
 NODE_NAME = "iris_controller"
 
-#DEFAULT_PORT = "/dev/rover/ttyBogie"
 DEFAULT_PORT = "/dev/rover/ttyIRIS"
 DEFAULT_BAUD = 115200
 
@@ -97,32 +94,32 @@ class IrisController(Node):
 
         self.drive_command_publisher = self.create_publisher(DriveCommandMessage, self.drive_command_publisher_topic, 1)
         self.iris_status_publisher = self.create_publisher(IrisStatusMessage, self.iris_status_publisher_topic, 1)
-                                                     
+
         self.registers = []
 
         self.iris_connected = False
 
         self.iris_last_seen_time = time()
 
-        self.timer = self.create_timer(self.wait_time, self.send_broadcast)
+        self.timer = self.create_timer(self.wait_time, self.main_loop)
 
     def __setup_minimalmodbus_for_485(self):
         self.iris.serial = serial.rs485.RS485(self.port, baudrate=self.baud, timeout=COMMUNICATIONS_TIMEOUT)
         self.iris.serial.rs485_mode = serial.rs485.RS485Settings(rts_level_for_rx=1, rts_level_for_tx=0,
                                                                  delay_before_rx=RX_DELAY, delay_before_tx=TX_DELAY)
 
-    def send_broadcast(self):
+    def main_loop(self):
         try:
             self.read_registers()
             self.broadcast_drive_if_current_mode()
             self.broadcast_arm_if_current_mode()
             self.broadcast_iris_status()
 
-        except Exception:
-            print("IRIS: Error occurred:")
+        except Exception as error:
+            print(f"IRIS: Error occurred: {error}")
 
         if (time() - self.iris_last_seen_time) > IRIS_LAST_SEEN_TIMEOUT:
-            print("Iris not seen for " + str(IRIS_LAST_SEEN_TIMEOUT) + " seconds. Exiting.")
+            print(f"Iris not seen for {IRIS_LAST_SEEN_TIMEOUT} seconds. Exiting.")
             self.destroy_node()
             return  # Exit so respawn can take over
 
@@ -130,7 +127,7 @@ class IrisController(Node):
         try:
             self.registers = self.iris.read_registers(0, len(MODBUS_REGISTERS))
             self.iris_last_seen_time = time()
-        except Exception:
+        except Exception as error:
             self.iris_connected = False
 
     def broadcast_drive_if_current_mode(self):

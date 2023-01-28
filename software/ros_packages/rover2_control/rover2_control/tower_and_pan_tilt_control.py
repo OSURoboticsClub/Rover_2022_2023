@@ -10,7 +10,7 @@ from time import time, sleep
 import serial.rs485
 import minimalmodbus
 
-from std_msgs.msg import UInt8, UInt16 
+from std_msgs.msg import UInt8, UInt16
 
 # Custom Imports
 from rover2_control_interface.msg import TowerPanTiltControlMessage
@@ -127,7 +127,7 @@ class TowerPanTiltControl(Node):
 
         self.send_startup_centering_and_lights_off_command()
 
-        self.timer = self.create_timer(self.wait_time, self.send_broadcast_messages)
+        self.timer = self.create_timer(self.wait_time, self.main_loop)
 
     def __setup_minimalmodbus_for_485(self):
         self.pan_tilt_node.serial = serial.rs485.RS485(self.port, baudrate=self.baud, timeout=COMMUNICATIONS_TIMEOUT)
@@ -136,15 +136,26 @@ class TowerPanTiltControl(Node):
         self.tower_node.serial = serial.rs485.RS485(self.port, baudrate=self.baud, timeout=COMMUNICATIONS_TIMEOUT)
         self.tower_node.serial.rs485_mode = serial.rs485.RS485Settings(rts_level_for_rx=1, rts_level_for_tx=0, delay_before_rx=RX_DELAY, delay_before_tx=TX_DELAY)
 
-    def send_broadcast_messages(self):
+    def main_loop(self):
         try:
+            self.send_pan_tilt_control_message()
+            self.modbus_nodes_seen_time = time()
+
+        except Exception as error:
+            pass
+            # print "Error occurred:", error
+
+        try:
+            self.send_tower_control_message()
             self.broadcast_co2_reading_message()
+            self.modbus_nodes_seen_time = time()
+
         except Exception as error:
             pass
             # print "Error occurred:", error
 
         if (time() - self.modbus_nodes_seen_time) > NODE_LAST_SEEN_TIMEOUT:
-            print("Tower pan/tilt not seen for", NODE_LAST_SEEN_TIMEOUT, "seconds. Exiting.")
+            print(f"Tower pan/tilt not seen for {NODE_LAST_SEEN_TIMEOUT} seconds. Exiting.")
             self.destroy_node()
             return  # Exit so respawn can take over
 
@@ -163,9 +174,10 @@ class TowerPanTiltControl(Node):
         except Exception as e:
             pass
 
-    def pan_tilt_control_callback(self, pan_tilt_control_message):
-        # this or groundstation will need to change if default messages are not sent in absence of a turn signal
-        try:
+    def send_pan_tilt_control_message(self):
+        if self.new_pan_tilt_control_message:
+            pan_tilt_control_message = self.pan_tilt_control_message  # type: TowerPanTiltControlMessage
+
             registers = list(PAN_TILT_CONTROL_DEFAULT_MESSAGE)
             registers[PAN_TILT_MODBUS_REGISTERS["CENTER_ALL"]] = int(pan_tilt_control_message.should_center)
 
@@ -184,19 +196,26 @@ class TowerPanTiltControl(Node):
                 registers[PAN_TILT_MODBUS_REGISTERS["HITCH_SERVO_NEGATIVE"]] = 1
 
             self.pan_tilt_node.write_registers(0, registers)
-            self.modbus_nodes_seen_time = time()
-        except Exception as e:
-            pass
+
+            self.new_pan_tilt_control_message = False
+        else:
+            self.pan_tilt_node.write_registers(0, PAN_TILT_CONTROL_DEFAULT_MESSAGE)
 
     def broadcast_co2_reading_message(self):
         self.tower_co2_publisher.publish(UInt16(data=self.tower_node.read_register(1)))
 
-    def tower_light_control_callback(self, tower_light_control_message):
-        try:
-            self.tower_node.write_register(0, tower_light_control_message.data)
-            self.modbus_nodes_seen_time = time()
-        except Exception as e:
-            pass
+    def send_tower_control_message(self):
+        if self.new_tower_light_control_message:
+            self.tower_node.write_register(0, self.tower_light_control_message.data)
+            self.new_tower_light_control_message = False
+
+    def pan_tilt_control_callback(self, pan_tilt_control):
+        self.pan_tilt_control_message = pan_tilt_control
+        self.new_pan_tilt_control_message = True
+
+    def tower_light_control_callback(self, light_control):
+        self.tower_light_control_message = light_control
+        self.new_tower_light_control_message = True
 
 def main(args=None):
     rclpy.init(args=args)
