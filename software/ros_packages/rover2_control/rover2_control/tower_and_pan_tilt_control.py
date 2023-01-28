@@ -13,7 +13,7 @@ import minimalmodbus
 from std_msgs.msg import UInt8, UInt16 
 
 # Custom Imports
-from rover2_control_interface.msg import TowerPanTiltControlMessage #Change to new rover control cmake
+from rover2_control_interface.msg import TowerPanTiltControlMessage
 
 #####################################
 # Global Variables
@@ -108,12 +108,12 @@ class TowerPanTiltControl(Node):
 
         self.connect_to_pan_tilt_and_tower()
 
-        self.pan_tilt_control_subscriber = self.create_subscription(TowerPanTiltControlMessage,
+        self.pan_tilt_control_subscriber = self.create_subscription(TowerPanTiltControlMessage, 
                                                                 self.pan_tilt_control_subscriber_topic,
-                                                            self.pan_tilt_control_callback,10)
+                                                                self.pan_tilt_control_callback, 10)
 
         self.tower_light_control_subscriber = self.create_subscription(UInt8, self.tower_light_control_subscriber_topic,
-                                                               self.tower_light_control_callback,10)
+                                                                self.tower_light_control_callback, 10)
 
         self.tower_co2_publisher = self.create_publisher(UInt16, self.tower_co2_publisher_topic, 1)
 
@@ -125,7 +125,9 @@ class TowerPanTiltControl(Node):
 
         self.modbus_nodes_seen_time = time()
 
-        self.run()
+        self.send_startup_centering_and_lights_off_command()
+
+        self.timer = self.create_timer(self.wait_time, self.send_broadcast_messages)
 
     def __setup_minimalmodbus_for_485(self):
         self.pan_tilt_node.serial = serial.rs485.RS485(self.port, baudrate=self.baud, timeout=COMMUNICATIONS_TIMEOUT)
@@ -134,37 +136,17 @@ class TowerPanTiltControl(Node):
         self.tower_node.serial = serial.rs485.RS485(self.port, baudrate=self.baud, timeout=COMMUNICATIONS_TIMEOUT)
         self.tower_node.serial.rs485_mode = serial.rs485.RS485Settings(rts_level_for_rx=1, rts_level_for_tx=0, delay_before_rx=RX_DELAY, delay_before_tx=TX_DELAY)
 
-    def run(self):
-        self.send_startup_centering_and_lights_off_command()
+    def send_broadcast_messages(self):
+        try:
+            self.broadcast_co2_reading_message()
+        except Exception as error:
+            pass
+            # print "Error occurred:", error
 
-        #while not rospy.is_shutdown():
-        while rclpy.ok():     #?
-            start_time = time()
-
-            try:
-                self.send_pan_tilt_control_message()
-                self.modbus_nodes_seen_time = time()
-
-            except Exception as error:
-                pass
-                # print "Error occurred:", error
-
-            try:
-                self.send_tower_control_message()
-                self.broadcast_co2_reading_message()
-                self.modbus_nodes_seen_time = time()
-
-            except Exception as error:
-                pass
-                # print "Error occurred:", error
-
-            if (time() - self.modbus_nodes_seen_time) > NODE_LAST_SEEN_TIMEOUT:
-                print("Tower pan/tilt not seen for", NODE_LAST_SEEN_TIMEOUT, "seconds. Exiting.")
-                return  # Exit so respawn can take over
-
-            time_diff = time() - start_time
-
-            sleep(max(self.wait_time - time_diff, 0))
+        if (time() - self.modbus_nodes_seen_time) > NODE_LAST_SEEN_TIMEOUT:
+            print("Tower pan/tilt not seen for", NODE_LAST_SEEN_TIMEOUT, "seconds. Exiting.")
+            self.destroy_node()
+            return  # Exit so respawn can take over
 
     def connect_to_pan_tilt_and_tower(self):
         self.tower_node = minimalmodbus.Instrument(self.port, int(self.tower_node_id))
@@ -178,13 +160,12 @@ class TowerPanTiltControl(Node):
             # self.pan_tilt_node.write_registers(0, registers)
 
             self.tower_node.write_register(0, TOWER_LIGHT_STATES["LIGHT_OFF"])
-        except:
+        except Exception as e:
             pass
 
-    def send_pan_tilt_control_message(self):
-        if self.new_pan_tilt_control_message:
-            pan_tilt_control_message = self.pan_tilt_control_message  # type: TowerPanTiltControlMessage
-
+    def pan_tilt_control_callback(self, pan_tilt_control_message):
+        # this or groundstation will need to change if default messages are not sent in absence of a turn signal
+        try:
             registers = list(PAN_TILT_CONTROL_DEFAULT_MESSAGE)
             registers[PAN_TILT_MODBUS_REGISTERS["CENTER_ALL"]] = int(pan_tilt_control_message.should_center)
 
@@ -203,32 +184,26 @@ class TowerPanTiltControl(Node):
                 registers[PAN_TILT_MODBUS_REGISTERS["HITCH_SERVO_NEGATIVE"]] = 1
 
             self.pan_tilt_node.write_registers(0, registers)
-
-            self.new_pan_tilt_control_message = False
-        else:
-            self.pan_tilt_node.write_registers(0, PAN_TILT_CONTROL_DEFAULT_MESSAGE)
+            self.modbus_nodes_seen_time = time()
+        except Exception as e:
+            pass
 
     def broadcast_co2_reading_message(self):
         self.tower_co2_publisher.publish(UInt16(data=self.tower_node.read_register(1)))
 
-    def send_tower_control_message(self):
-        if self.new_tower_light_control_message:
-            self.tower_node.write_register(0, self.tower_light_control_message.data)
-            self.new_tower_light_control_message = False
-
-    def pan_tilt_control_callback(self, pan_tilt_control):
-        self.pan_tilt_control_message = pan_tilt_control
-        self.new_pan_tilt_control_message = True
-
-    def tower_light_control_callback(self, light_control):
-        self.tower_light_control_message = light_control
-        self.new_tower_light_control_message = True
+    def tower_light_control_callback(self, tower_light_control_message):
+        try:
+            self.tower_node.write_register(0, tower_light_control_message.data)
+            self.modbus_nodes_seen_time = time()
+        except Exception as e:
+            pass
 
 def main(args=None):
     rclpy.init(args=args)
     tower_control = TowerPanTiltControl()
     rclpy.spin(tower_control)
-    tower_control.shutdown_node()
+    tower_control.destroy_node()
     rclpy.shutdown()
+
 if __name__ == "__main__":
     TowerPanTiltControl()
