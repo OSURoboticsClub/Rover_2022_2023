@@ -4,12 +4,12 @@
 #####################################
 # Python native imports
 import rclpy
+from rclpy.node import Node
+
 import serial
-from time import time
+from time import time, sleep
 import json
 import re
-
-from rclpy.node import Node
 
 from nmea_msgs.msg import Sentence
 from sensor_msgs.msg import Imu
@@ -56,7 +56,20 @@ class Odometry(Node):
 
         self.odom_last_seen_time = time()
 
-        self.timer = self.create_timer(self.wait_time, self.process_messages)
+        self.timer = self.create_timer(self.wait_time, self.main_loop)
+
+    def main_loop(self):
+        try:
+            self.process_messages()
+            self.odom_last_seen_time = time()
+
+        except Exception as error:
+            pass
+
+        if (time() - self.odom_last_seen_time) > ODOM_LAST_SEEN_TIMEOUT:
+            print(f"Odometry not seen for {ODOM_LAST_SEEN_TIMEOUT} seconds. Exiting.")
+            self.destroy_node()
+            return  # Exit so respawn can take over
 
     def process_messages(self):
         if self.odom_serial.in_waiting > 0:
@@ -84,13 +97,6 @@ class Odometry(Node):
 
             # if imu_cal:
             #     print(imu_cal)
-
-            self.odom_last_seen_time = time()
-
-        if (time() - self.odom_last_seen_time) > ODOM_LAST_SEEN_TIMEOUT:
-            print ("Odometry not seen for", ODOM_LAST_SEEN_TIMEOUT, "seconds. Exiting.")
-            self.destroy_node()
-            return  # Exit so respawn can take over
 
     @staticmethod
     def chksum_nmea(sentence):
