@@ -4,8 +4,8 @@
 #####################################
 # Python native imports
 import rclpy
-
 from rclpy.node import Node
+
 from time import time, sleep
 
 # Custom Imports
@@ -35,7 +35,7 @@ WATCHDOG_TIMEOUT = 0.3
 class DriveCoordinator(Node):
     def __init__(self):
         super().__init__(NODE_NAME)
-       
+
         self.iris_drive_command_topic = self.declare_parameter("~iris_drive_command_topic", DEFAULT_IRIS_DRIVE_COMMAND_TOPIC).value
         self.ground_station_drive_command_topic = \
             self.declare_parameter("~ground_station_drive_command_topic", DEFAULT_GROUND_STATION_DRIVE_COMMAND_TOPIC).value
@@ -61,11 +61,11 @@ class DriveCoordinator(Node):
         self.iris_drive_command_subscriber = self.create_subscription(DriveCommandMessage,
                                                                 self.iris_drive_command_topic,
                                                                 self.iris_drive_command_callback,
-                                                                100)
+                                                                1)
         self.ground_station_command_subscriber = self.create_subscription(DriveCommandMessage,
                                                                 self.ground_station_drive_command_topic,
                                                                 self.ground_station_drive_command_callback,
-                                                                100)
+                                                                1)
                                                                 
         self.rear_bogie_publisher = self.create_publisher(DriveControlMessage, self.rear_bogie_topic, 1)
         self.left_bogie_publisher = self.create_publisher(DriveControlMessage, self.left_bogie_topic, 1)
@@ -111,8 +111,8 @@ class DriveCoordinator(Node):
         right_drive.first_motor_direction = right_direction
         right_drive.second_motor_direction = right_direction
 
-        left_speed = min(int(abs(left * UINT16_MAX)), UINT16_MAX)
-        right_speed = min(int(abs(right * UINT16_MAX)), UINT16_MAX)
+        left_speed = min(abs((1 if left else 0) * UINT16_MAX), UINT16_MAX)
+        right_speed = min(abs((1 if right else 0) * UINT16_MAX), UINT16_MAX)
 
         rear_drive.first_motor_speed = left_speed
         left_drive.first_motor_speed = left_speed

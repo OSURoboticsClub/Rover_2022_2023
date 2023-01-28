@@ -109,7 +109,7 @@ class ChassisPanTiltControl(Node):
             pass
 
         if (time() - self.modbus_nodes_seen_time) > NODE_LAST_SEEN_TIMEOUT:
-            print("Chassis pan/tilt not seen for", NODE_LAST_SEEN_TIMEOUT, "seconds. Exiting.")
+            print(f"Chassis pan/tilt not seen for {NODE_LAST_SEEN_TIMEOUT} seconds. Exiting.")
             self.destroy_node()
             return  # Exit so respawn can take over
 
