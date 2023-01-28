@@ -57,5 +57,11 @@ def generate_launch_description():
                 '~second_motor_id': 1
             }],
             **config
+        ),
+        Node(
+            package='rover2_control',
+            executable='effectors_control',
+            name='effectors',
+            **config
         )
     ])
