@@ -34,16 +34,15 @@ WATCHDOG_TIMEOUT = 0.3
 #####################################
 class DriveCoordinator(Node):
     def __init__(self):
-
         super().__init__(NODE_NAME)
        
-        self.iris_drive_command_topic = self.get_parameter_or("~iris_drive_command_topic", DEFAULT_IRIS_DRIVE_COMMAND_TOPIC)
+        self.iris_drive_command_topic = self.declare_parameter("~iris_drive_command_topic", DEFAULT_IRIS_DRIVE_COMMAND_TOPIC).value
         self.ground_station_drive_command_topic = \
-            self.get_parameter_or("~ground_station_drive_command_topic", DEFAULT_GROUND_STATION_DRIVE_COMMAND_TOPIC)      
-        self.rear_bogie_topic = self.get_parameter_or("~rear_bogie_control_topic", DEFAULT_REAR_BOGIE_TOPIC)       
-        self.left_bogie_topic = self.get_parameter_or("~left_bogie_control_topic", DEFAULT_LEFT_BOGIE_TOPIC)
-        self.right_bogie_topic = self.get_parameter_or("~right_bogie_control_topic", DEFAULT_RIGHT_BOGIE_TOPIC)
-        self.wait_time = 1.0 / self.get_parameter_or("~hertz", DEFAULT_HERTZ)
+            self.declare_parameter("~ground_station_drive_command_topic", DEFAULT_GROUND_STATION_DRIVE_COMMAND_TOPIC).value
+        self.rear_bogie_topic = self.declare_parameter("~rear_bogie_control_topic", DEFAULT_REAR_BOGIE_TOPIC).value
+        self.left_bogie_topic = self.declare_parameter("~left_bogie_control_topic", DEFAULT_LEFT_BOGIE_TOPIC).value
+        self.right_bogie_topic = self.declare_parameter("~right_bogie_control_topic", DEFAULT_RIGHT_BOGIE_TOPIC).value
+        self.wait_time = 1.0 / self.declare_parameter("~hertz", DEFAULT_HERTZ).value
 
         # Drive data
         self.drive_command_data = {
@@ -75,20 +74,13 @@ class DriveCoordinator(Node):
         self.last_message_time = time()
 
         # ########## Run the Class ##########
-        self.run()
+        self.timer = self.create_timer(self.wait_time, self.main_loop)
 
-    def run(self):
-        while rclpy.ok():
-            start_time = time()
-
-            try:
-                self.process_drive_commands()
-            except Exception as error:
-                print ("COORDINATOR: Error occurred:", error)
-
-            time_diff = time() - start_time
-
-            sleep(max(self.wait_time - time_diff, 0))
+    def main_loop(self):
+        try:
+            self.process_drive_commands()
+        except Exception as error:
+            print (f"COORDINATOR: Error occurred: {error}")
 
     def process_drive_commands(self):
         if not self.drive_command_data["iris"]["message"].ignore_drive_control:
@@ -97,7 +89,6 @@ class DriveCoordinator(Node):
             self.send_drive_control_command(self.drive_command_data["ground_station"])
 
     def send_drive_control_command(self, drive_command_data):
-
         if (time() - drive_command_data["last_time"]) > WATCHDOG_TIMEOUT:
             drive_command = DriveCommandMessage()
         else:
@@ -110,15 +101,15 @@ class DriveCoordinator(Node):
         left = drive_command.drive_twist.linear.x - drive_command.drive_twist.angular.z
         right = drive_command.drive_twist.linear.x + drive_command.drive_twist.angular.z
 
-        left_direction = 1 if left >= 0 else 0
-        rear_drive.first_motor_direction = bool(left_direction)
-        left_drive.first_motor_direction = bool(left_direction)
-        left_drive.second_motor_direction = bool(left_direction)
+        left_direction = left >= 0
+        rear_drive.first_motor_direction = left_direction
+        left_drive.first_motor_direction = left_direction
+        left_drive.second_motor_direction = left_direction
 
-        right_direction = 1 if right >= 0 else 0
-        rear_drive.second_motor_direction = bool(right_direction)
-        right_drive.first_motor_direction = bool(right_direction)
-        right_drive.second_motor_direction = bool(right_direction)
+        right_direction = right >= 0
+        rear_drive.second_motor_direction = right_direction
+        right_drive.first_motor_direction = right_direction
+        right_drive.second_motor_direction = right_direction
 
         left_speed = min(int(abs(left * UINT16_MAX)), UINT16_MAX)
         right_speed = min(int(abs(right * UINT16_MAX)), UINT16_MAX)
@@ -145,12 +136,11 @@ class DriveCoordinator(Node):
         self.drive_command_data["ground_station"]["last_time"] = time()
 
 def main(args=None):
-	rclpy.init(args=args)
-	drive_Cord = DriveCoordinator()
-	rclpy.spin(drive_Cord)
-	drive_Cord.destroy_node()
-	rclpy.shutdown()
+    rclpy.init(args=args)
+    drive_Cord = DriveCoordinator()
+    rclpy.spin(drive_Cord)
+    drive_Cord.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
-    
