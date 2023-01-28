@@ -11,6 +11,16 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='rover2_control',
+            executable='iris_controller',
+            name='iris_controller',
+            parameters=[{
+                '~port': '/dev/rover/ttyIRIS',
+                '~hertz': 20
+            }],
+            **config
+        ),
+        Node(
+            package='rover2_control',
             executable='drive_control',
             name='rear_bogie',
             parameters=[{

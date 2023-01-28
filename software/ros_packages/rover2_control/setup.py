@@ -22,6 +22,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'iris_controller = rover2_control.iris_controller:main',
             'drive_control = rover2_control.drive_control:main'
         ],
     },
