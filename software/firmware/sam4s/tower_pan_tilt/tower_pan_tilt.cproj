@@ -202,9 +202,10 @@
         <board id="board.user_board.sam4s" value="Add" config="" content-id="Atmel.ASF" />
       </framework-data>
     </AsfFrameworkConfig>
-    <avrtool>com.atmel.avrdbg.tool.samice</avrtool>
+    <avrtool>
+    </avrtool>
     <avrtoolserialnumber>801028741</avrtoolserialnumber>
-    <avrdeviceexpectedsignature>0x288B09E0</avrdeviceexpectedsignature>
+    <avrdeviceexpectedsignature>0x289B09E0</avrdeviceexpectedsignature>
     <com_atmel_avrdbg_tool_samice>
       <ToolOptions>
         <InterfaceProperties>

@@ -5,9 +5,10 @@
 #define MODBUS_SLAVE_ID 2
 #define MODBUS_BPS 115200
 #define MODBUS_TIMEOUT 2000
+
 #define MODBUS_SER_PORT UART1
 #define MODBUS_EN_PORT PIOA
-#define MODBUS_EN_PIN PIO_PA17
+#define MODBUS_EN_PIN PIO_PA7
 
 enum MODBUS_REGISTERS {
 	CENTER_ALL = 0,
@@ -71,22 +72,22 @@ int main(void) {
 	servo_s tilt_servo;
 	//servo_s hitch_servo;
 	
-	servo_setup(&pan_servo, PWM_CHANNEL_0, pan_min, pan_max, pan_center);
+	//servo_setup(&pan_servo, PWM_CHANNEL_0, pan_min, pan_max, pan_center);
 	
 	// Since the thing can do like 8 revolutions, restrict range to only 1 revolution
 	// Not tested, possible the servo needs some physical adjustment
-	servo_setup(&tilt_servo, PWM_CHANNEL_1, tilt_min, tilt_max, tilt_center);
+	//servo_setup(&tilt_servo, PWM_CHANNEL_1, tilt_min, tilt_max, tilt_center);
 	
 	// Test code
-	servo_write_us(&tilt_servo, tilt_min);
+	/*servo_write_us(&tilt_servo, tilt_min);
 	for (volatile uint32_t i = 0; i < (12000000) * 3; i++);
 	servo_write_us(&tilt_servo, tilt_center);
 	for (volatile uint32_t i = 0; i < (12000000) * 3; i++);
-	servo_write_us(&tilt_servo, tilt_max);
+	servo_write_us(&tilt_servo, tilt_max);*/
 	
 	while (1) {
 		modbus_update();
-		handle_pan_tilt(&pan_servo, &tilt_servo);
+		//handle_pan_tilt(&pan_servo, &tilt_servo);
 		//handle_hitch(&hitch_servo);
 	}
 }
