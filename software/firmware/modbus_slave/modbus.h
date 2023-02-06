@@ -42,51 +42,12 @@
 #ifndef MODBUS_H_
 #define MODBUS_H_
 
-#define RX_BUFFER_SIZE 8192 // size of RX buffer, this determines max incoming packet size
-#define TX_BUFFER_SIZE 8192 //							!!!!!! Important change this value to the size of the tx buffer in the UART module
+#define RX_BUFFER_SIZE 8192 // size of RX buffer, this determines max incoming packet size (MUST BE A POWER OF 2)
+#define TX_BUFFER_SIZE 8192 // !!!!!! Important change this value to the size of the tx buffer in the UART module
 
 // To handle edge case if a packet starts toward end of buffer but wraps around to beginning
 #define PKT_WRAP_ARND(idx) \
-    ((idx) & (RX_BUFFER_SIZE - 1))
-
-#define FC_WRITE_MULT	0x10	//write multiple registers function code
-#define FC_READ_MULT	0x03	//read multiple registers function code
-
-
-#define INT_REG_OFFSET		0		//Offset for translating uint16_t array index to register index
-#define FLOAT_REG_OFFSET	256		//Offset for translating float array index to register index
-#define CHAR_REG_OFFSET		512		//Offset for translating char array index to register index
-#define BOOL_REG_OFFSET		768		//Offset for translating bool array index to register index
-
-#define INT_REG_BYTE_SZ		2		//Number of bytes for an int register
-#define FLOAT_REG_BYTE_SZ	4		//Number of bytes for a float register
-#define CHAR_REG_BYTE_SZ	1		//Number of bytes for a char register
-#define BOOL_REG_BYTE_SZ	1		//Number of bytes for a bool register
-
-#define SLAVE_ID_IDX		0		//packet byte index for slave ID byte
-#define FC_IDX				1		//packet byte index for Function Code byte
-#define START_REG_H_IDX		2		//packet byte index for the high side of the start register number
-#define START_REG_L_IDX		3		//packet byte index for the low side of the start register number
-#define NUM_REG_H_IDX		4		//packet byte index for the high side of the end register number
-#define NUM_REG_L_IDX		5		//packet byte index for the low side of the end register number
-#define WR_DATA_SIZE_IDX	6		//packet byte index for the size of the data to follow in bytes (write multiple only)
-#define RD_DATA_SIZE_IDX	2		//packet byte index for the size of the data to follow in bytes (read multiple only)
-
-#define WR_DATA_BYTE_START	7		//packet byte index for the start of the data to be written (write multiple only)
-#define RD_DATA_BYTE_START	3		//packet byte index for start of data in read response (read multiple only
-
-#define WR_RESP_PACKET_SIZE	8		//packet size for write multiple response packet
-#define RD_RESP_PACKET_MIN_SIZE	5	//packet size for read multiple response with no data bytes added yet
-
-#define ABS_MIN_PACKET_SIZE 7			//this is the smallest possible packet size in the protocol in bytes
-#define ABS_MIN_WRITE_PACKET_SIZE 10	//this is the smallest possible packet size for a write command from the master
-#define WRITE_RES_PACKET_SIZE 8			//this is the only possible packet size for a write response from the slave This is the same as the size of read from master
-#define ABS_MIN_READ_RES_PACKET_SIZE 6  //this is the smallest possible packet size for a read response from the slave
-
-#define CRC_SIZE 2					//size of CRC in bytes
-
-#define MASTER_ADRESS 0X00
-
+((idx) & (RX_BUFFER_SIZE - 1))
 
 //#define MODBUS_DEBUG				//uncomment this to enable debugging over USB_CDC this depends on USB_CDC being initialized elsewhere
 
@@ -108,15 +69,6 @@ extern uint16_t responsePacketSize;
 void modbus_slave_init(const uint8_t);    // Initialize modbus uart port, clock, memory, transmit enable, and ...
 void modbus_slave_update(void);   //This function does all of the heavy lifting for modbus
 bool modbus_slave_comm_good(void);
-
-//internal functions:
-uint8_t* pop_packet();
-bool packet_complete();
-uint16_t ModRTU_CRC(uint8_t* buf, int len);
-void readHandler(uint8_t* responsePacket, uint16_t start_reg, uint16_t end_reg);
-void writeHandler(uint8_t* data_packet, uint16_t start_reg, uint16_t end_reg);
-uint16_t getReadResponseDataSize(uint16_t start_reg, uint16_t end_reg);
-uint16_t buffer_get_data_sz(void);
 
 #ifdef __cplusplus
 }
