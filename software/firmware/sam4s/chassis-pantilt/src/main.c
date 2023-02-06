@@ -26,6 +26,10 @@ int tilt_center = 1670;
 int tilt_max = 2380;
 
 
+void board_setup(void) {
+	WDT->WDT_MR |= WDT_MR_WDDIS; // Disable watchdog timer to prevent uC resetting every 15 seconds :)
+}
+
 void handle_pan_tilt(servo_s *pan_servo, servo_s *tilt_servo) {
 	if (intRegisters[CENTER_ALL]) {
 		servo_write_us(pan_servo, pan_servo->us_center);
@@ -47,6 +51,7 @@ void handle_pan_tilt(servo_s *pan_servo, servo_s *tilt_servo) {
 
 int main(void) {
 	sysclk_init();
+	board_setup();
 	
 	modbus_init(MODBUS_SLAVE_ID, MODBUS_SER_PORT, MODBUS_BPS, MODBUS_EN_PORT, MODBUS_EN_PIN, MODBUS_TIMEOUT);
 	
