@@ -12,7 +12,7 @@
 #define MODBUS_EN_PIN PIO_PA8
 
 
-void board_setup(void) {
+static void board_setup(void) {
 	WDT->WDT_MR |= WDT_MR_WDDIS; // Disable watchdog timer to prevent uC resetting every 15 seconds :)
 }
 

@@ -35,7 +35,9 @@ static void _juggle(void) {
 }
 
 static CRGB _status_scale(int scale, int val) {
-	
+	// Placeholder for now to get warnings to shut up
+	CRGB dummy;
+	return dummy;
 }
 
 static void _handle_lights(int lights) {

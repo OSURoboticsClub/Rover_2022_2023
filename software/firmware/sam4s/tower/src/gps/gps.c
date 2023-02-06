@@ -97,7 +97,7 @@ void gps_handle(void) {
 
 void USART0_Handler(void) {
 	if (usart_is_rx_ready(GPS_IN_SER_PORT)) {
-		char read_char;
+		uint32_t read_char;
 		usart_read(GPS_IN_SER_PORT, &read_char);
 		
 		if (read_char == GPS_END_OF_PACKET) {
@@ -105,7 +105,7 @@ void USART0_Handler(void) {
 			
 			// Adds some newlines and the start of the JSON format for next received packet
 			_gps_buffer_puts(GPS_END_OF_TX);
-			} else if (read_char != '\n') {
+		} else if (read_char != '\n') {
 			_gps_buffer_putc(read_char);
 		}
 	}

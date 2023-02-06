@@ -29,12 +29,12 @@ int tilt_center = 1820;
 int tilt_max = 2400;
 
 
-void board_setup(void) {
+static void board_setup(void) {
 	WDT->WDT_MR |= WDT_MR_WDDIS; // Disable watchdog timer to prevent uC resetting every 15 seconds :)
 	pio_set_output(PIOA,PIO_PA3,LOW,DISABLE,DISABLE);
 }
 
-void handle_pan_tilt(servo_s *pan_servo, servo_s *tilt_servo) {
+static void handle_pan_tilt(servo_s *pan_servo, servo_s *tilt_servo) {
 	if (intRegisters[CENTER_ALL]) {
 		servo_write_us(pan_servo, pan_servo->us_center);
 		servo_write_us(tilt_servo, tilt_servo->us_center);
@@ -53,7 +53,7 @@ void handle_pan_tilt(servo_s *pan_servo, servo_s *tilt_servo) {
 	}
 }
 
-void handle_hitch(servo_s *hitch_servo) {
+static void handle_hitch(servo_s *hitch_servo) {
 	if (intRegisters[HITCH_SERVO_POSITIVE]) {
 		servo_write_angle(hitch_servo, 60);
 	} else if (intRegisters[HITCH_SERVO_NEGATIVE]) {
@@ -70,24 +70,15 @@ int main(void) {
 	
 	servo_s pan_servo;
 	servo_s tilt_servo;
-	//servo_s hitch_servo;
+	servo_s hitch_servo;
 	
-	//servo_setup(&pan_servo, PWM_CHANNEL_0, pan_min, pan_max, pan_center);
-	
-	// Since the thing can do like 8 revolutions, restrict range to only 1 revolution
-	// Not tested, possible the servo needs some physical adjustment
-	//servo_setup(&tilt_servo, PWM_CHANNEL_1, tilt_min, tilt_max, tilt_center);
-	
-	// Test code
-	/*servo_write_us(&tilt_servo, tilt_min);
-	for (volatile uint32_t i = 0; i < (12000000) * 3; i++);
-	servo_write_us(&tilt_servo, tilt_center);
-	for (volatile uint32_t i = 0; i < (12000000) * 3; i++);
-	servo_write_us(&tilt_servo, tilt_max);*/
+	servo_setup(&pan_servo, PWM_CHANNEL_0, pan_min, pan_max, pan_center);
+	servo_setup(&tilt_servo, PWM_CHANNEL_1, tilt_min, tilt_max, tilt_center);
+	servo_setup(&tilt_servo, PWM_CHANNEL_2, 69, 69, 69); // CHANGE ME
 	
 	while (1) {
 		modbus_update();
-		//handle_pan_tilt(&pan_servo, &tilt_servo);
-		//handle_hitch(&hitch_servo);
+		handle_pan_tilt(&pan_servo, &tilt_servo);
+		handle_hitch(&hitch_servo);
 	}
 }
