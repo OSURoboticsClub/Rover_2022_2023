@@ -1,7 +1,7 @@
 ////////// Includes //////////
-#include <PID_v1.h>
-#include <Encoder.h>
-#include <ModbusRtu.h>
+#include "PID_v1.h"
+#include "Encoder.h"
+#include "modbus_interface.h"
 
 ////////// Hardware / Data Enumerations //////////
 enum HARDWARE {
@@ -126,7 +126,7 @@ enum MODBUS_REGISTERS {
 // Modbus stuff
 const uint8_t node_id = 1;
 const uint8_t mobus_serial_port_number = 3;
-uint16_t modbus_data[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint16_t intRegisters[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 uint8_t num_modbus_registers = 0;
 int8_t poll_state = 0;
 bool communication_good = false;
@@ -195,16 +195,310 @@ PID motor_pid_forefinger(&motor_groups[MG_INDEX::FOREFINGER].INPUT_POS, &motor_g
 PID motor_pid_thumb(&motor_groups[MG_INDEX::THUMB].INPUT_POS, &motor_groups[MG_INDEX::THUMB].OUTPUT_POS, &motor_groups[MG_INDEX::THUMB].SETPOINT_POS, kp, ki, kd, DIRECT);
 PID motor_pid_middlefinger(&motor_groups[MG_INDEX::MIDDLEFINGER].INPUT_POS, &motor_groups[MG_INDEX::MIDDLEFINGER].OUTPUT_POS, &motor_groups[MG_INDEX::MIDDLEFINGER].SETPOINT_POS, kp, ki, kd, DIRECT);
 
-// Modbus
-Modbus slave(node_id, mobus_serial_port_number, HARDWARE::RS485_EN);
+void poll_modbus(){
+    modbus_update();
+    communication_good = modbus_comm_good();
+
+    // Set modes
+    if (intRegisters[MODBUS_REGISTERS::MODE] != MODES::NO_CHANGE){
+        global_state = intRegisters[MODBUS_REGISTERS::MODE];
+        modbus_position = intRegisters[MODBUS_REGISTERS::FINGER_POSITION];
+        global_home = intRegisters[MODBUS_REGISTERS::HOME];
+        global_home_started = global_home;
+        modbus_light_state = intRegisters[MODBUS_REGISTERS::LIGHT_STATE];
+
+        // when shit dies
+        intRegisters[MODBUS_REGISTERS::LIGHT_STATE_OUPUT] = modbus_light_state;
+        intRegisters[MODBUS_REGISTERS::MODE_OUTPUT] = global_state;
+        intRegisters[MODBUS_REGISTERS::FINGER_POSITION_OUTPUT] = modbus_position;
+    }
+}
+
+void set_leds(){
+    if(poll_state > 4){
+        message_count++;
+        if(message_count > 2){
+            digitalWrite(HARDWARE::LED_BLUE, !digitalRead(HARDWARE::LED_BLUE));
+            message_count = 0;
+        }
+        digitalWrite(HARDWARE::LED_GREEN, LOW);
+        digitalWrite(HARDWARE::LED_RED, HIGH);
+    }
+    else if(!communication_good){
+        digitalWrite(HARDWARE::LED_BLUE, LOW);
+        digitalWrite(HARDWARE::LED_GREEN, HIGH);
+        digitalWrite(HARDWARE::LED_RED, LOW);
+    }
+    digitalWrite(HARDWARE::WORKLIGHT, modbus_light_state);
+}
+
+void home(int motor){
+    if (motor_groups[motor].IS_HOMING){
+        // if it is time to move the motor and we haven't tripped the current yet:
+        unsigned long curr_millis = millis();
+        if (curr_millis - prev_millis > interval){
+            prev_millis = curr_millis;
+            motor_groups[motor].SETPOINT_POS -= 10; // increment by counts
+        }
+        if (motor_groups[motor].CURRENT_READING > motor_groups[motor].TRIP_THRESHOLD){
+            motor_groups[motor].ENC->write(0); //
+            motor_groups[motor].SETPOINT_POS = motor_groups[motor].HOME_BACKOFF; // backoff
+            motor_groups[motor].IS_HOMING = false; // don't home anymore
+        }
+    }
+}
+
+void home_routine(){
+    if (global_home){
+        // need to home all axis
+        // home 2 / 3 / 4 first
+        if (global_home_started){
+            motor_groups[MG_INDEX::FOREFINGER].IS_HOMING = true;
+            motor_groups[MG_INDEX::THUMB].IS_HOMING = true;
+            motor_groups[MG_INDEX::MIDDLEFINGER].IS_HOMING = true;
+            global_home_started = false;
+            pinch_home_started = true;
+        }
+        // wait till done
+        if (!motor_groups[MG_INDEX::FOREFINGER].IS_HOMING && !motor_groups[MG_INDEX::THUMB].IS_HOMING && !motor_groups[MG_INDEX::MIDDLEFINGER].IS_HOMING){
+            // home 1
+            if (pinch_home_started){
+                motor_groups[MG_INDEX::PINCH].IS_HOMING = true;
+                pinch_home_started = false;
+            }
+        }
+        // reset
+        if (!motor_groups[MG_INDEX::FOREFINGER].IS_HOMING && !motor_groups[MG_INDEX::THUMB].IS_HOMING && !motor_groups[MG_INDEX::MIDDLEFINGER].IS_HOMING && !motor_groups[MG_INDEX::PINCH].IS_HOMING){
+            global_home = false;
+        }
+    }
+    home(MG_INDEX::FOREFINGER);
+    home(MG_INDEX::THUMB);
+    home(MG_INDEX::MIDDLEFINGER);
+    home(MG_INDEX::PINCH);
+}
+
+void get_current(int motor){
+    // subtract the last reading:
+    motor_groups[motor].TOTAL = motor_groups[motor].TOTAL - motor_groups[motor].READINGS[motor_groups[motor].READ_INDEX];
+    // read from the sensor:
+    motor_groups[motor].READINGS[motor_groups[motor].READ_INDEX] = analogRead(motor_groups[motor].CURRENT_PIN) - current_midpoint;
+    // add the reading to the TOTAL:
+    motor_groups[motor].TOTAL = motor_groups[motor].TOTAL + motor_groups[motor].READINGS[motor_groups[motor].READ_INDEX];
+    // advance to the next position in the array:
+    motor_groups[motor].READ_INDEX++;
+
+    // if we're at the end of the array...
+    if (motor_groups[motor].READ_INDEX >= motor_groups[motor].NUM_READINGS) {
+    // go to begginging:
+    motor_groups[motor].READ_INDEX = 0;
+    }
+
+    // calculate the average:
+    motor_groups[motor].CURRENT_READING = motor_groups[motor].TOTAL / motor_groups[motor].NUM_READINGS;
+}
+
+void poll_sensors(){
+
+    // Update current
+    get_current(MG_INDEX::PINCH);
+    get_current(MG_INDEX::FOREFINGER);
+    get_current(MG_INDEX::THUMB);
+    get_current(MG_INDEX::MIDDLEFINGER);
+
+    // Update motor positions
+    motor_groups[MG_INDEX::PINCH].INPUT_POS = motor_groups[MG_INDEX::PINCH].ENC->read();
+    motor_groups[MG_INDEX::FOREFINGER].INPUT_POS = motor_groups[MG_INDEX::FOREFINGER].ENC->read();
+    motor_groups[MG_INDEX::THUMB].INPUT_POS = motor_groups[MG_INDEX::THUMB].ENC->read();
+    motor_groups[MG_INDEX::MIDDLEFINGER].INPUT_POS = motor_groups[MG_INDEX::MIDDLEFINGER].ENC->read();
+
+    // Report current
+    intRegisters[MODBUS_REGISTERS::CURRENT_PINCH] = abs(motor_groups[MG_INDEX::PINCH].CURRENT_READING);
+    intRegisters[MODBUS_REGISTERS::CURRENT_FOREFINGER] = abs(motor_groups[MG_INDEX::FOREFINGER].CURRENT_READING);
+    intRegisters[MODBUS_REGISTERS::CURRENT_THUMB] = abs(motor_groups[MG_INDEX::THUMB].CURRENT_READING);
+    intRegisters[MODBUS_REGISTERS::CURRENT_MIDDLEFINGER] = abs(motor_groups[MG_INDEX::MIDDLEFINGER].CURRENT_READING);
+
+    // Report motor position
+    intRegisters[MODBUS_REGISTERS::POSITION_PINCH] = motor_groups[MG_INDEX::PINCH].INPUT_POS;
+    intRegisters[MODBUS_REGISTERS::POSITION_FOREFINGER] = motor_groups[MG_INDEX::FOREFINGER].INPUT_POS;
+    intRegisters[MODBUS_REGISTERS::POSITION_THUMB] = motor_groups[MG_INDEX::THUMB].INPUT_POS;
+    intRegisters[MODBUS_REGISTERS::POSITION_MIDDLEFINGER] = motor_groups[MG_INDEX::MIDDLEFINGER].INPUT_POS;
+}
+
+void update_motor_position(int motor){
+    // If we overcurrent and the LGPS flag is not set, set the last good position and enable the flag
+    if (motor_groups[motor].CURRENT_READING < motor_groups[motor].GRIP_THRESHOLD){
+        if(!motor_groups[motor].LAST_GOOD_POSITION_SET){
+            motor_groups[motor].LAST_GOOD_POSITION = universal_position - backoff;
+            motor_groups[motor].LAST_GOOD_POSITION_SET = true;
+        }
+    }
+    // If we back off reset the LGPS flag
+    if (universal_position < motor_groups[motor].LAST_GOOD_POSITION){
+        motor_groups[motor].LAST_GOOD_POSITION_SET = false;
+    }
+    // if the LGPS flag is set we don't want to move forward
+    if (motor_groups[motor].LAST_GOOD_POSITION_SET){
+        motor_groups[motor].SETPOINT_POS = motor_groups[motor].LAST_GOOD_POSITION;
+    }
+    else{
+        // set to universal position
+        motor_groups[motor].SETPOINT_POS = universal_position;
+    }
+    // Always constrain to the valid ranges
+    motor_groups[motor].SETPOINT_POS = constrain(motor_groups[motor].SETPOINT_POS, motor_groups[motor].TRAVEL_MIN, motor_groups[motor].TRAVEL_MAX);
+}
+
+void set_motor_output(int motor, int direct, int pwm){
+  /*
+  Control Logic
+                A  |  B
+  0) BRAKE:     1     1
+  1) FWD:      1/0    0
+  2) REV:       0    1/0
+  3) COAST:     0     0
+  */
+
+  // make sure the PWM doesn't go too high
+  // pwm = map(pwm, 0, 255, 0, 110);
+
+  if (direct <= 4){
+    switch (direct){
+      case 0:
+      analogWrite(motor_groups[motor].PWM_1_PIN, 255);
+      analogWrite(motor_groups[motor].PWM_2_PIN, 255);
+      break;
+      case 1:
+      analogWrite(motor_groups[motor].PWM_1_PIN, pwm);
+      analogWrite(motor_groups[motor].PWM_2_PIN, 0);
+      break;
+      case 2:
+      analogWrite(motor_groups[motor].PWM_1_PIN, 0);
+      analogWrite(motor_groups[motor].PWM_2_PIN, pwm);
+      break;
+      case 3:
+      analogWrite(motor_groups[motor].PWM_1_PIN, 0);
+      analogWrite(motor_groups[motor].PWM_2_PIN, 0);
+      break;
+      default:
+      analogWrite(motor_groups[motor].PWM_1_PIN, 0);
+      analogWrite(motor_groups[motor].PWM_1_PIN, 0);
+    }
+  }
+}
+
+void set_position(int motor){
+
+    //move to new position
+    if (motor_groups[motor].INPUT_POS > motor_groups[motor].SETPOINT_POS) { //need to move negative
+        motor_groups[motor].PID_CONTROL->Compute();
+        motor_groups[motor].PID_CONTROL->SetControllerDirection(REVERSE);
+        set_motor_output(motor, REV, motor_groups[motor].OUTPUT_POS);
+    }
+    else{ //need to move positive
+        motor_groups[motor].PID_CONTROL->SetControllerDirection(DIRECT);
+        motor_groups[motor].PID_CONTROL->Compute();
+        set_motor_output(motor, FWD, motor_groups[motor].OUTPUT_POS);
+    }
+}
+
+void setup_hardware(){
+  // setup IO
+  pinMode(HARDWARE::PINCH_MOTOR_PWM_1, OUTPUT);
+  pinMode(HARDWARE::PINCH_MOTOR_PWM_2, OUTPUT);
+  pinMode(HARDWARE::PINCH_MOTOR_CURRENT_SENSE, INPUT);
+
+  pinMode(HARDWARE::FOREFINGER_MOTOR_PWM_1, OUTPUT);
+  pinMode(HARDWARE::FOREFINGER_MOTOR_PWM_2, OUTPUT);
+  pinMode(HARDWARE::FOREFINGER_MOTOR_CURRENT_SENSE, INPUT);
+
+  pinMode(HARDWARE::THUMB_MOTOR_PWM_1, OUTPUT);
+  pinMode(HARDWARE::THUMB_MOTOR_PWM_2, OUTPUT);
+  pinMode(HARDWARE::THUMB_MOTOR_CURRENT_SENSE, INPUT);
+
+  pinMode(HARDWARE::MIDDLEFINGER_MOTOR_PWM_1, OUTPUT);
+  pinMode(HARDWARE::MIDDLEFINGER_MOTOR_PWM_2, OUTPUT);
+  pinMode(HARDWARE::MIDDLEFINGER_MOTOR_CURRENT_SENSE, INPUT);
+
+  pinMode(HARDWARE::LED_RED, OUTPUT);
+  pinMode(HARDWARE::LED_GREEN, OUTPUT);
+  pinMode(HARDWARE::LED_BLUE, OUTPUT);
+
+  // setup default states
+  set_motor_output(MG_INDEX::PINCH, BRAKE, 0);
+  set_motor_output(MG_INDEX::FOREFINGER, BRAKE, 0);
+  set_motor_output(MG_INDEX::THUMB, BRAKE, 0);
+  set_motor_output(MG_INDEX::MIDDLEFINGER, BRAKE, 0);
+
+  digitalWrite(HARDWARE::LED_RED, HIGH);
+  digitalWrite(HARDWARE::LED_GREEN, HIGH);
+  digitalWrite(HARDWARE::LED_BLUE, HIGH);
+
+  analogReadAveraging(32);
+}
+
+void set_motor_states(){
+    // update positions based on modes
+    if (!global_home){
+        if (global_state == MODES::NORMAL){
+            /* In normal operation the fingers are straight and parallel
+            universal_position moves the forefinger, thumb, and middlefinger while pinch is fixed.
+            */
+            universal_position = map(modbus_position, 0, 65535, motor_groups[MG_INDEX::FOREFINGER].TRAVEL_MIN, motor_groups[MG_INDEX::FOREFINGER].TRAVEL_MAX);
+
+            motor_groups[MG_INDEX::PINCH].SETPOINT_POS = normal_setpoint;
+            update_motor_position(MG_INDEX::FOREFINGER);
+            update_motor_position(MG_INDEX::THUMB);
+            update_motor_position(MG_INDEX::MIDDLEFINGER);
+        }
+        else if (global_state == MODES::TWO_FINGER_PINCH){
+            /* In two finger pinch the pinch moves the fore and middle together
+            universal_position moves the forefinger, thumb, and middlefinger while pinch is fixed.
+            */
+            universal_position = map(modbus_position, 0, 65535, two_finger_pinch_travel_min, two_finger_pinch_travel_max);
+
+            motor_groups[MG_INDEX::PINCH].SETPOINT_POS = two_finger_pinch_setpoint;
+            update_motor_position(MG_INDEX::FOREFINGER);
+            update_motor_position(MG_INDEX::THUMB);
+            update_motor_position(MG_INDEX::MIDDLEFINGER);
+        }
+        else if (global_state == MODES::WIDE){
+            /* In wide mode the pinch moves the fore and middle apart for a wider grip
+            universal_position moves the forefinger, thumb, and middlefinger while pinch is fixed.
+            */
+            universal_position = map(modbus_position, 0, 65535, motor_groups[MG_INDEX::FOREFINGER].TRAVEL_MIN, motor_groups[MG_INDEX::FOREFINGER].TRAVEL_MAX);
+
+            motor_groups[MG_INDEX::PINCH].SETPOINT_POS = wide_setpoint;
+            update_motor_position(MG_INDEX::FOREFINGER);
+            update_motor_position(MG_INDEX::THUMB);
+            update_motor_position(MG_INDEX::MIDDLEFINGER);
+
+        }
+        else if (global_state == MODES::SCISSOR){
+            /* In wide mode the pinch moves the fore and middle apart for a wider grip
+            universal_position moves the forefinger, thumb, and middlefinger while pinch is fixed.
+            */
+            universal_position = map(modbus_position, 0, 65535, motor_groups[MG_INDEX::PINCH].TRAVEL_MIN, motor_groups[MG_INDEX::PINCH].TRAVEL_MAX);
+
+            motor_groups[MG_INDEX::FOREFINGER].SETPOINT_POS = scissor_setpoint;
+            motor_groups[MG_INDEX::THUMB].SETPOINT_POS = scissor_setpoint;
+            motor_groups[MG_INDEX::MIDDLEFINGER].SETPOINT_POS = scissor_setpoint;
+            update_motor_position(MG_INDEX::PINCH);
+        }
+    }
+    // Update the position
+    set_position(MG_INDEX::PINCH);
+    set_position(MG_INDEX::FOREFINGER);
+    set_position(MG_INDEX::THUMB);
+    set_position(MG_INDEX::MIDDLEFINGER);
+}
 
 ////////// Setup //////////
 void setup() {
   setup_hardware();
+  modbus_init(node_id, mobus_serial_port_number, HARDWARE::RS485_EN, 115200, 150);
 
-  num_modbus_registers = sizeof(modbus_data) / sizeof(modbus_data[0]);
-  slave.begin(115200);
-  slave.setTimeOut(150);
+  num_modbus_registers = sizeof(intRegisters) / sizeof(intRegisters[0]);
 
   Serial.begin(9600);
 
@@ -274,302 +568,4 @@ void loop() {
     set_leds();
     home_routine();
     set_motor_states();
-}
-
-void setup_hardware(){
-  // setup IO
-  pinMode(HARDWARE::PINCH_MOTOR_PWM_1, OUTPUT);
-  pinMode(HARDWARE::PINCH_MOTOR_PWM_2, OUTPUT);
-  pinMode(HARDWARE::PINCH_MOTOR_CURRENT_SENSE, INPUT);
-
-  pinMode(HARDWARE::FOREFINGER_MOTOR_PWM_1, OUTPUT);
-  pinMode(HARDWARE::FOREFINGER_MOTOR_PWM_2, OUTPUT);
-  pinMode(HARDWARE::FOREFINGER_MOTOR_CURRENT_SENSE, INPUT);
-
-  pinMode(HARDWARE::THUMB_MOTOR_PWM_1, OUTPUT);
-  pinMode(HARDWARE::THUMB_MOTOR_PWM_2, OUTPUT);
-  pinMode(HARDWARE::THUMB_MOTOR_CURRENT_SENSE, INPUT);
-
-  pinMode(HARDWARE::MIDDLEFINGER_MOTOR_PWM_1, OUTPUT);
-  pinMode(HARDWARE::MIDDLEFINGER_MOTOR_PWM_2, OUTPUT);
-  pinMode(HARDWARE::MIDDLEFINGER_MOTOR_CURRENT_SENSE, INPUT);
-
-  pinMode(HARDWARE::LED_RED, OUTPUT);
-  pinMode(HARDWARE::LED_GREEN, OUTPUT);
-  pinMode(HARDWARE::LED_BLUE, OUTPUT);
-
-  // setup default states
-  set_motor_output(MG_INDEX::PINCH, BRAKE, 0);
-  set_motor_output(MG_INDEX::FOREFINGER, BRAKE, 0);
-  set_motor_output(MG_INDEX::THUMB, BRAKE, 0);
-  set_motor_output(MG_INDEX::MIDDLEFINGER, BRAKE, 0);
-
-  digitalWrite(HARDWARE::LED_RED, HIGH);
-  digitalWrite(HARDWARE::LED_GREEN, HIGH);
-  digitalWrite(HARDWARE::LED_BLUE, HIGH);
-
-  analogReadAveraging(32);
-}
-
-void poll_modbus(){
-    poll_state = slave.poll(modbus_data, num_modbus_registers);
-    communication_good = !slave.getTimeOutState();
-
-    // Set modes
-    if (modbus_data[MODBUS_REGISTERS::MODE] != MODES::NO_CHANGE){
-        global_state = modbus_data[MODBUS_REGISTERS::MODE];
-        modbus_position = modbus_data[MODBUS_REGISTERS::FINGER_POSITION];
-        global_home = modbus_data[MODBUS_REGISTERS::HOME];
-        global_home_started = global_home;
-        modbus_light_state = modbus_data[MODBUS_REGISTERS::LIGHT_STATE];
-
-        // when shit dies
-        modbus_data[MODBUS_REGISTERS::LIGHT_STATE_OUPUT] = modbus_light_state;
-        modbus_data[MODBUS_REGISTERS::MODE_OUTPUT] = global_state;
-        modbus_data[MODBUS_REGISTERS::FINGER_POSITION_OUTPUT] = modbus_position;
-    }
-}
-
-void set_leds(){
-    if(poll_state > 4){
-        message_count++;
-        if(message_count > 2){
-            digitalWrite(HARDWARE::LED_BLUE, !digitalRead(HARDWARE::LED_BLUE));
-            message_count = 0;
-        }
-        digitalWrite(HARDWARE::LED_GREEN, LOW);
-        digitalWrite(HARDWARE::LED_RED, HIGH);
-    }
-    else if(!communication_good){
-        digitalWrite(HARDWARE::LED_BLUE, LOW);
-        digitalWrite(HARDWARE::LED_GREEN, HIGH);
-        digitalWrite(HARDWARE::LED_RED, LOW);
-    }
-    digitalWrite(HARDWARE::WORKLIGHT, modbus_light_state);
-}
-
-void set_motor_states(){
-    // update positions based on modes
-    if (!global_home){
-        if (global_state == MODES::NORMAL){
-            /* In normal operation the fingers are straight and parallel
-            universal_position moves the forefinger, thumb, and middlefinger while pinch is fixed.
-            */
-            universal_position = map(modbus_position, 0, 65535, motor_groups[MG_INDEX::FOREFINGER].TRAVEL_MIN, motor_groups[MG_INDEX::FOREFINGER].TRAVEL_MAX);
-
-            motor_groups[MG_INDEX::PINCH].SETPOINT_POS = normal_setpoint;
-            update_motor_position(MG_INDEX::FOREFINGER);
-            update_motor_position(MG_INDEX::THUMB);
-            update_motor_position(MG_INDEX::MIDDLEFINGER);
-        }
-        else if (global_state == MODES::TWO_FINGER_PINCH){
-            /* In two finger pinch the pinch moves the fore and middle together
-            universal_position moves the forefinger, thumb, and middlefinger while pinch is fixed.
-            */
-            universal_position = map(modbus_position, 0, 65535, two_finger_pinch_travel_min, two_finger_pinch_travel_max);
-
-            motor_groups[MG_INDEX::PINCH].SETPOINT_POS = two_finger_pinch_setpoint;
-            update_motor_position(MG_INDEX::FOREFINGER);
-            update_motor_position(MG_INDEX::THUMB);
-            update_motor_position(MG_INDEX::MIDDLEFINGER);
-        }
-        else if (global_state == MODES::WIDE){
-            /* In wide mode the pinch moves the fore and middle apart for a wider grip
-            universal_position moves the forefinger, thumb, and middlefinger while pinch is fixed.
-            */
-            universal_position = map(modbus_position, 0, 65535, motor_groups[MG_INDEX::FOREFINGER].TRAVEL_MIN, motor_groups[MG_INDEX::FOREFINGER].TRAVEL_MAX);
-
-            motor_groups[MG_INDEX::PINCH].SETPOINT_POS = wide_setpoint;
-            update_motor_position(MG_INDEX::FOREFINGER);
-            update_motor_position(MG_INDEX::THUMB);
-            update_motor_position(MG_INDEX::MIDDLEFINGER);
-
-        }
-        else if (global_state == MODES::SCISSOR){
-            /* In wide mode the pinch moves the fore and middle apart for a wider grip
-            universal_position moves the forefinger, thumb, and middlefinger while pinch is fixed.
-            */
-            universal_position = map(modbus_position, 0, 65535, motor_groups[MG_INDEX::PINCH].TRAVEL_MIN, motor_groups[MG_INDEX::PINCH].TRAVEL_MAX);
-
-            motor_groups[MG_INDEX::FOREFINGER].SETPOINT_POS = scissor_setpoint;
-            motor_groups[MG_INDEX::THUMB].SETPOINT_POS = scissor_setpoint;
-            motor_groups[MG_INDEX::MIDDLEFINGER].SETPOINT_POS = scissor_setpoint;
-            update_motor_position(MG_INDEX::PINCH);
-        }
-    }
-    // Update the position
-    set_position(MG_INDEX::PINCH);
-    set_position(MG_INDEX::FOREFINGER);
-    set_position(MG_INDEX::THUMB);
-    set_position(MG_INDEX::MIDDLEFINGER);
-}
-
-void home_routine(){
-    if (global_home){
-        // need to home all axis
-        // home 2 / 3 / 4 first
-        if (global_home_started){
-            motor_groups[MG_INDEX::FOREFINGER].IS_HOMING = true;
-            motor_groups[MG_INDEX::THUMB].IS_HOMING = true;
-            motor_groups[MG_INDEX::MIDDLEFINGER].IS_HOMING = true;
-            global_home_started = false;
-            pinch_home_started = true;
-        }
-        // wait till done
-        if (!motor_groups[MG_INDEX::FOREFINGER].IS_HOMING && !motor_groups[MG_INDEX::THUMB].IS_HOMING && !motor_groups[MG_INDEX::MIDDLEFINGER].IS_HOMING){
-            // home 1
-            if (pinch_home_started){
-                motor_groups[MG_INDEX::PINCH].IS_HOMING = true;
-                pinch_home_started = false;
-            }
-        }
-        // reset
-        if (!motor_groups[MG_INDEX::FOREFINGER].IS_HOMING && !motor_groups[MG_INDEX::THUMB].IS_HOMING && !motor_groups[MG_INDEX::MIDDLEFINGER].IS_HOMING && !motor_groups[MG_INDEX::PINCH].IS_HOMING){
-            global_home = false;
-        }
-    }
-    home(MG_INDEX::FOREFINGER);
-    home(MG_INDEX::THUMB);
-    home(MG_INDEX::MIDDLEFINGER);
-    home(MG_INDEX::PINCH);
-}
-
-void home(int motor){
-    if (motor_groups[motor].IS_HOMING){
-        // if it is time to move the motor and we haven't tripped the current yet:
-        unsigned long curr_millis = millis();
-        if (curr_millis - prev_millis > interval){
-            prev_millis = curr_millis;
-            motor_groups[motor].SETPOINT_POS -= 10; // increment by counts
-        }
-        if (motor_groups[motor].CURRENT_READING > motor_groups[motor].TRIP_THRESHOLD){
-            motor_groups[motor].ENC->write(0); //
-            motor_groups[motor].SETPOINT_POS = motor_groups[motor].HOME_BACKOFF; // backoff
-            motor_groups[motor].IS_HOMING = false; // don't home anymore
-        }
-    }
-}
-
-void poll_sensors(){
-
-    // Update current
-    get_current(MG_INDEX::PINCH);
-    get_current(MG_INDEX::FOREFINGER);
-    get_current(MG_INDEX::THUMB);
-    get_current(MG_INDEX::MIDDLEFINGER);
-
-    // Update motor positions
-    motor_groups[MG_INDEX::PINCH].INPUT_POS = motor_groups[MG_INDEX::PINCH].ENC->read();
-    motor_groups[MG_INDEX::FOREFINGER].INPUT_POS = motor_groups[MG_INDEX::FOREFINGER].ENC->read();
-    motor_groups[MG_INDEX::THUMB].INPUT_POS = motor_groups[MG_INDEX::THUMB].ENC->read();
-    motor_groups[MG_INDEX::MIDDLEFINGER].INPUT_POS = motor_groups[MG_INDEX::MIDDLEFINGER].ENC->read();
-
-    // Report current
-    modbus_data[MODBUS_REGISTERS::CURRENT_PINCH] = abs(motor_groups[MG_INDEX::PINCH].CURRENT_READING);
-    modbus_data[MODBUS_REGISTERS::CURRENT_FOREFINGER] = abs(motor_groups[MG_INDEX::FOREFINGER].CURRENT_READING);
-    modbus_data[MODBUS_REGISTERS::CURRENT_THUMB] = abs(motor_groups[MG_INDEX::THUMB].CURRENT_READING);
-    modbus_data[MODBUS_REGISTERS::CURRENT_MIDDLEFINGER] = abs(motor_groups[MG_INDEX::MIDDLEFINGER].CURRENT_READING);
-
-    // Report motor position
-    modbus_data[MODBUS_REGISTERS::POSITION_PINCH] = motor_groups[MG_INDEX::PINCH].INPUT_POS;
-    modbus_data[MODBUS_REGISTERS::POSITION_FOREFINGER] = motor_groups[MG_INDEX::FOREFINGER].INPUT_POS;
-    modbus_data[MODBUS_REGISTERS::POSITION_THUMB] = motor_groups[MG_INDEX::THUMB].INPUT_POS;
-    modbus_data[MODBUS_REGISTERS::POSITION_MIDDLEFINGER] = motor_groups[MG_INDEX::MIDDLEFINGER].INPUT_POS;
-}
-
-void update_motor_position(int motor){
-    // If we overcurrent and the LGPS flag is not set, set the last good position and enable the flag
-    if (motor_groups[motor].CURRENT_READING < motor_groups[motor].GRIP_THRESHOLD){
-        if(!motor_groups[motor].LAST_GOOD_POSITION_SET){
-            motor_groups[motor].LAST_GOOD_POSITION = universal_position - backoff;
-            motor_groups[motor].LAST_GOOD_POSITION_SET = true;
-        }
-    }
-    // If we back off reset the LGPS flag
-    if (universal_position < motor_groups[motor].LAST_GOOD_POSITION){
-        motor_groups[motor].LAST_GOOD_POSITION_SET = false;
-    }
-    // if the LGPS flag is set we don't want to move forward
-    if (motor_groups[motor].LAST_GOOD_POSITION_SET){
-        motor_groups[motor].SETPOINT_POS = motor_groups[motor].LAST_GOOD_POSITION;
-    }
-    else{
-        // set to universal position
-        motor_groups[motor].SETPOINT_POS = universal_position;
-    }
-    // Always constrain to the valid ranges
-    motor_groups[motor].SETPOINT_POS = constrain(motor_groups[motor].SETPOINT_POS, motor_groups[motor].TRAVEL_MIN, motor_groups[motor].TRAVEL_MAX);
-}
-
-void get_current(int motor){
-    // subtract the last reading:
-    motor_groups[motor].TOTAL = motor_groups[motor].TOTAL - motor_groups[motor].READINGS[motor_groups[motor].READ_INDEX];
-    // read from the sensor:
-    motor_groups[motor].READINGS[motor_groups[motor].READ_INDEX] = analogRead(motor_groups[motor].CURRENT_PIN) - current_midpoint;
-    // add the reading to the TOTAL:
-    motor_groups[motor].TOTAL = motor_groups[motor].TOTAL + motor_groups[motor].READINGS[motor_groups[motor].READ_INDEX];
-    // advance to the next position in the array:
-    motor_groups[motor].READ_INDEX++;
-
-    // if we're at the end of the array...
-    if (motor_groups[motor].READ_INDEX >= motor_groups[motor].NUM_READINGS) {
-    // go to begginging:
-    motor_groups[motor].READ_INDEX = 0;
-    }
-
-    // calculate the average:
-    motor_groups[motor].CURRENT_READING = motor_groups[motor].TOTAL / motor_groups[motor].NUM_READINGS;
-}
-
-void set_position(int motor){
-
-    //move to new position
-    if (motor_groups[motor].INPUT_POS > motor_groups[motor].SETPOINT_POS) { //need to move negative
-        motor_groups[motor].PID_CONTROL->Compute();
-        motor_groups[motor].PID_CONTROL->SetControllerDirection(REVERSE);
-        set_motor_output(motor, REV, motor_groups[motor].OUTPUT_POS);
-    }
-    else{ //need to move positive
-        motor_groups[motor].PID_CONTROL->SetControllerDirection(DIRECT);
-        motor_groups[motor].PID_CONTROL->Compute();
-        set_motor_output(motor, FWD, motor_groups[motor].OUTPUT_POS);
-    }
-}
-
-void set_motor_output(int motor, int direct, int pwm){
-  /*
-  Control Logic
-                A  |  B
-  0) BRAKE:     1     1
-  1) FWD:      1/0    0
-  2) REV:       0    1/0
-  3) COAST:     0     0
-  */
-
-  // make sure the PWM doesn't go too high
-  // pwm = map(pwm, 0, 255, 0, 110);
-
-  if (direct <= 4){
-    switch (direct){
-      case 0:
-      analogWrite(motor_groups[motor].PWM_1_PIN, 255);
-      analogWrite(motor_groups[motor].PWM_2_PIN, 255);
-      break;
-      case 1:
-      analogWrite(motor_groups[motor].PWM_1_PIN, pwm);
-      analogWrite(motor_groups[motor].PWM_2_PIN, 0);
-      break;
-      case 2:
-      analogWrite(motor_groups[motor].PWM_1_PIN, 0);
-      analogWrite(motor_groups[motor].PWM_2_PIN, pwm);
-      break;
-      case 3:
-      analogWrite(motor_groups[motor].PWM_1_PIN, 0);
-      analogWrite(motor_groups[motor].PWM_2_PIN, 0);
-      break;
-      default:
-      analogWrite(motor_groups[motor].PWM_1_PIN, 0);
-      analogWrite(motor_groups[motor].PWM_1_PIN, 0);
-    }
-  }
 }
