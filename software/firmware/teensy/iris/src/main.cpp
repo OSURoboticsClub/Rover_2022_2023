@@ -1,6 +1,6 @@
 ////////// Includes //////////
 #include "SBUS.h"
-#include <ModbusRtu.h>
+#include "modbus_interface.h"
 #include "Arduino.h" // Needed so I can nicely define things
 
 ////////// Hardware / Data Enumerations //////////
@@ -36,7 +36,7 @@ const uint8_t mobus_serial_port_number = 2;
 
 #define SBUS_HARDWARE_PORT Serial3
 
-uint16_t modbus_data[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+uint16_t intRegisters[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 uint8_t num_modbus_registers = 0;
 
 int8_t poll_state = 0;
@@ -50,24 +50,7 @@ uint16_t telem_24v_scalar = 36680;
 
 ////////// Class Instantiations //////////
 SBUS x8r(SBUS_HARDWARE_PORT);
-Modbus slave(node_id, mobus_serial_port_number, 0); // 0 in thrid param means regular UART
-
-void setup() {
-    setup_hardware();
-    x8r.begin();
-
-    num_modbus_registers = sizeof(modbus_data) / sizeof(modbus_data[0]);
-    slave.begin(115200);
-
-    Serial.begin(9600);
-}
-
-void loop() {
-    poll_sbus();
-    poll_modbus();
-    set_leds();
-    poll_sensors();
-}
+//modbus slave initilization in setup() 
 
 void setup_hardware(){
     // Setup pins as inputs / outputs
@@ -100,17 +83,17 @@ void setup_hardware(){
 
 
 void poll_sbus(){
-    x8r.read(&modbus_data[0], &failSafe, &lostFrames);
+    x8r.read(&intRegisters[0], &failSafe, &lostFrames);
 }
 
 void poll_sensors(){
-    modbus_data[MODBUS_REGISTERS::VOLTAGE_24] = telem_24v_scalar * (analogRead(HARDWARE::TELEM_24V) / 8192.0);
+    intRegisters[MODBUS_REGISTERS::VOLTAGE_24] = telem_24v_scalar * (analogRead(HARDWARE::TELEM_24V) / 8192.0);
 
 }
 
 void poll_modbus(){
-    poll_state = slave.poll(modbus_data, num_modbus_registers);
-    communication_good = !slave.getTimeOutState();
+    modbus_update();
+    communication_good = modbus_comm_good();
 }
 
 void set_leds(){
@@ -128,4 +111,19 @@ void set_leds(){
         digitalWrite(HARDWARE::LED_GREEN, HIGH);
         digitalWrite(HARDWARE::LED_RED, LOW);
     }
+}
+void setup() {
+    setup_hardware();
+    x8r.begin();
+    modbus_init(node_id, mobus_serial_port_number, 0, 115200, 150); // 0 in thrid param means regular UART
+
+    num_modbus_registers = sizeof(intRegisters) / sizeof(intRegisters[0]);
+    Serial.begin(9600);
+}
+
+void loop() {
+    poll_sbus();
+    poll_modbus();
+    set_leds();
+    poll_sensors();
 }
