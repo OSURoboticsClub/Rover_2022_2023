@@ -2,7 +2,9 @@
 #include "modbus.h"
 
 /* Begin modbus slave library AND node references */
+static bool timeout_active = false;
 uint16_t timeout;
+uint32_t elapsed_ms = 0;
 /* End modbus slave library AND node references */
 
 /* Begin modbus slave library references */
@@ -12,17 +14,6 @@ Pio *globalEnPinPort;
 uint32_t globalEnPin;
 
 uint16_t transmitIndex; // helper variables for transmitting
-
-static uint32_t elapsed_ms = 0;
-
-void TC0_Handler(void) {
-	// If an overflow occurred, increase elapsed by 2000 ms
-	// since this happens every 2 seconds
-	// We read the register status to clear overflow flag
-	if (tc_get_status(TC0, 0) & TC_SR_COVFS) {
-		elapsed_ms += 2000;
-	}
-}
 
 static void init_timer(void) {
 	sysclk_enable_peripheral_clock(ID_TC0);
@@ -47,13 +38,12 @@ void serial_port_write(uint8_t *packet, uint16_t packetSize) {
 uint32_t get_elapsed_ms(void) {
 	// Return elapsed ms plus the current value of the timer
 	// Since the timer ticks 32000 times a second, divide by 32 to get ms
-	return elapsed_ms + (tc_read_cv(TC0, 0) / 32);
+	return timeout_active ? elapsed_ms + (tc_read_cv(TC0, 0) / 32) : 0;
 }
 /* End modbus slave library references */
 
 /* Begin node references */
-void modbus_init(int slave_id, Uart *port485, const uint32_t baud, Pio *enPinPort, const uint32_t enPin, const uint16_t serialTimeout) {
-	timeout = serialTimeout;
+void modbus_init(int slave_id, Uart *port485, const uint32_t baud, Pio *enPinPort, const uint32_t enPin) {
 	RS485Port = port485;
 
 	if (RS485Port == UART0) {
@@ -86,8 +76,6 @@ void modbus_init(int slave_id, Uart *port485, const uint32_t baud, Pio *enPinPor
 	pio_set_output(enPinPort, enPin, LOW, DISABLE, DISABLE); // init the enable pin
 	globalEnPinPort = enPinPort;
 	globalEnPin = enPin;
-
-	init_timer(); // Enable timer for timeout purposes
 	
 	modbus_slave_init(slave_id);
 }
@@ -96,8 +84,20 @@ void modbus_update(void) {
 	modbus_slave_update();
 }
 
+void modbus_timeout_en(bool enable, uint16_t timeout_ms) {
+	if (enable) {
+		elapsed_ms = 0;
+		timeout = timeout_ms;
+		init_timer();
+		timeout_active = true;
+	} else {
+		tc_stop(TC0, 0);
+		timeout_active = false;
+	}
+}
+
 bool modbus_comm_good(void) {
-	return modbus_slave_comm_good();
+	return timeout_active ? modbus_slave_comm_good() : true;
 }
 
 // interrupt handler for incoming data

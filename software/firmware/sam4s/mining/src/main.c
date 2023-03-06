@@ -23,7 +23,6 @@
 // modbus settings
 #define MODBUS_SLAVE_ID 15
 #define MODBUS_BPS 115200
-#define MODBUS_TIMEOUT 2000
 #define MODBUS_SER_PORT UART0
 #define MODBUS_EN_PORT PIOA
 #define MODBUS_EN_PIN PIO_PA11
@@ -60,7 +59,7 @@ int main(void) {
 	sysclk_init();
 	board_setup();
 	
-	modbus_init(MODBUS_SLAVE_ID, MODBUS_SER_PORT, MODBUS_BPS, MODBUS_EN_PORT, MODBUS_EN_PIN, MODBUS_TIMEOUT);
+	modbus_init(MODBUS_SLAVE_ID, MODBUS_SER_PORT, MODBUS_BPS, MODBUS_EN_PORT, MODBUS_EN_PIN);
 	
 	stepper_s stepper;
 	stepper_setup(&stepper, STEPPER_PWM_CHANNEL, STEPPER_DIR_PORT, STEPPER_DIR_PIN, STEPPER_STEP_PORT, STEPPER_STEP_PIN);
