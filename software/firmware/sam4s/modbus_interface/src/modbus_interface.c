@@ -12,6 +12,7 @@ uint32_t elapsed_ms = 0;
 Uart *RS485Port;
 Pio *globalEnPinPort;
 uint32_t globalEnPin;
+uint32_t rxEnPin = 0;
 
 uint16_t transmitIndex; // helper variables for transmitting
 
@@ -29,8 +30,11 @@ static void init_timer(void) {
 }
 
 void serial_port_write(uint8_t *packet, uint16_t packetSize) {
-	// write out response packet
 	pio_set(globalEnPinPort, globalEnPin); // transceiver transmit enable
+	if (rxEnPin > 0) {
+		pio_set(globalEnPinPort, rxEnPin); // receiver disable
+	}
+	
 	transmitIndex = 0;
 	uart_enable_interrupt(RS485Port, UART_IMR_TXRDY);
 }
@@ -96,6 +100,11 @@ void modbus_timeout_en(bool enable, uint16_t timeout_ms) {
 	}
 }
 
+void modbus_set_rx_en_pin(uint32_t rx_en_pin) {
+	pio_set_output(globalEnPinPort, rx_en_pin, LOW, DISABLE, DISABLE);
+	rxEnPin = rx_en_pin;
+}
+
 bool modbus_comm_good(void) {
 	return timeout_active ? modbus_slave_comm_good() : true;
 }
@@ -111,6 +120,10 @@ void UART_Handler(void) {
 			transmitIndex++;
 		} else if (uart_is_tx_empty(RS485Port)) {
 			pio_clear(globalEnPinPort, globalEnPin);
+			if (rxEnPin > 0) {
+				pio_clear(globalEnPinPort, rxEnPin); // receiver enable
+			}
+			
 			uart_disable_interrupt(RS485Port, UART_IMR_TXRDY);
 		}
 	}

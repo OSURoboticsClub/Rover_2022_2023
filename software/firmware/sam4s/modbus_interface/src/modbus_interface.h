@@ -23,6 +23,7 @@ extern bool			boolRegisters[REGISTER_AR_SIZE];
 void modbus_init(int, Uart*, const uint32_t, Pio*, const uint32_t);
 void modbus_update(void);
 void modbus_timeout_en(bool enable, uint16_t timeout_ms);
+void modbus_set_rx_en_pin(uint32_t rx_en_pin);
 bool modbus_comm_good(void);
 
 void UART_Handler(void);

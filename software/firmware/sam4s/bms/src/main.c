@@ -33,7 +33,7 @@
 #include <math.h>
 #include <string.h>
 #include <main.h>
-#include <modbus.h>
+#include "modbus_uart1.h"
 #include <registers.h>
 #include <interupt_handlers.h>
 
