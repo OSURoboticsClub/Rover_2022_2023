@@ -15,8 +15,6 @@ Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "chassis-pantilt", "chassis-
 EndProject
 Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "bms", "bms\bms.cproj", "{A3EC2503-4B8E-43F3-BC60-903B925AA699}"
 EndProject
-Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "battery_characterization", "battery_characterization\battery_characterization.cproj", "{D525CB04-16DD-4787-98D3-93CF8C6A5D19}"
-EndProject
 Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "stepper_library", "stepper_library\stepper_library.cproj", "{EC39132A-5794-4099-90CC-B2500569C6F4}"
 EndProject
 Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "servo_library", "servo_library\servo_library.cproj", "{86D8716A-D194-4667-B112-54CA533F4740}"
@@ -51,10 +49,6 @@ Global
 		{A3EC2503-4B8E-43F3-BC60-903B925AA699}.Debug|ARM.Build.0 = Debug|ARM
 		{A3EC2503-4B8E-43F3-BC60-903B925AA699}.Release|ARM.ActiveCfg = Release|ARM
 		{A3EC2503-4B8E-43F3-BC60-903B925AA699}.Release|ARM.Build.0 = Release|ARM
-		{D525CB04-16DD-4787-98D3-93CF8C6A5D19}.Debug|ARM.ActiveCfg = Debug|ARM
-		{D525CB04-16DD-4787-98D3-93CF8C6A5D19}.Debug|ARM.Build.0 = Debug|ARM
-		{D525CB04-16DD-4787-98D3-93CF8C6A5D19}.Release|ARM.ActiveCfg = Release|ARM
-		{D525CB04-16DD-4787-98D3-93CF8C6A5D19}.Release|ARM.Build.0 = Release|ARM
 		{EC39132A-5794-4099-90CC-B2500569C6F4}.Debug|ARM.ActiveCfg = Debug|ARM
 		{EC39132A-5794-4099-90CC-B2500569C6F4}.Debug|ARM.Build.0 = Debug|ARM
 		{EC39132A-5794-4099-90CC-B2500569C6F4}.Release|ARM.ActiveCfg = Release|ARM

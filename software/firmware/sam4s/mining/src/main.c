@@ -40,7 +40,9 @@ enum MODBUS_REGISTERS {
 
 //int steps_per_rev = 465;
 
-void board_setup(void) {
+static void board_setup(void) {
+	WDT->WDT_MR |= WDT_MR_WDDIS; // Disable watchdog timer to prevent uC resetting every 15 seconds :)
+	
 	pmc_enable_periph_clk(ID_PIOA);			//This enables GPIO Output, (necessary)
 	pmc_enable_periph_clk(ID_PIOB);
 	
