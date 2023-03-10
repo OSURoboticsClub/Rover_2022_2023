@@ -33,8 +33,8 @@
         <options>
           <option id="common.boards" value="Add" config="" content-id="Atmel.ASF" />
           <option id="common.services.basic.clock" value="Add" config="" content-id="Atmel.ASF" />
-          <option id="sam.drivers.pwm" value="Add" config="" content-id="Atmel.ASF" />
           <option id="sam.drivers.pio" value="Add" config="" content-id="Atmel.ASF" />
+          <option id="sam.drivers.pwm" value="Add" config="" content-id="Atmel.ASF" />
           <option id="sam.utils.linker_scripts#atsam4s4" value="Add" config="" content-id="Atmel.ASF" />
         </options>
         <configurations>
@@ -202,7 +202,8 @@
         <board id="board.user_board.sam4s" value="Add" config="" content-id="Atmel.ASF" />
       </framework-data>
     </AsfFrameworkConfig>
-    <avrtool>com.atmel.avrdbg.tool.samice</avrtool>
+    <avrtool>
+    </avrtool>
     <avrtoolserialnumber>801028741</avrtoolserialnumber>
     <avrdeviceexpectedsignature>0x288B09E0</avrdeviceexpectedsignature>
     <com_atmel_avrdbg_tool_samice>

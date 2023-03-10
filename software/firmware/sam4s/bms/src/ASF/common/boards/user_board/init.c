@@ -11,7 +11,7 @@
 #include <asf.h>
 #include <board.h>
 #include <conf_board.h>
-#include <modbus.h>
+#include "modbus_interface.h"
 #include <registers.h>
 
 void board_init(void)
@@ -30,9 +30,9 @@ void board_init(void)
 	
 	pmc_enable_periph_clk(ID_PIOA);
 	pmc_enable_periph_clk(ID_PIOB);
-	
-	pio_set_output(RS485_NRE_PORT,RS485_NRE,LOW,DISABLE,DISABLE);			//init modbus receive enable pin		//only necessary for low power mode builds
-	modbus_init(UART1,500000,RS485_DE_PORT,RS485_DE,SLAVEID);					//init modbus      //note this version of modbus has been modified to support sleep mode
+
+	modbus_init(SLAVEID, UART1, 115200, RS485_DE_PORT, RS485_DE);
+	modbus_set_rx_en_pin(RS485_NRE); // only necessary for low power mode builds
 	
 	pio_set_output(TEMP_SEL0_PORT,TEMP_SEL0,LOW,DISABLE,DISABLE);
 	pio_set_output(TEMP_SEL1_PORT,TEMP_SEL1,LOW,DISABLE,DISABLE);
