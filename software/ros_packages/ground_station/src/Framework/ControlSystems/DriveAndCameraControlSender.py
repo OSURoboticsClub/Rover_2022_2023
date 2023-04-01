@@ -7,17 +7,18 @@ import logging
 from inputs import devices, GamePad
 from time import time
 
-import rospy
-from rover_control.msg import DriveCommandMessage, TowerPanTiltControlMessage
+import rclpy
+from rclpy.node import Node
+from rover2_control_interface.msg import DriveCommandMessage, TowerPanTiltControlMessage
 
 #####################################
 # Global Variables
 #####################################
 #GAME_CONTROLLER_NAME = "Microsoft X-Box One S pad"  <-- This was the actual xbox controller that Dylan had to buy at CIRC 2018
 GAME_CONTROLLER_NAME = "PowerA Xbox One wired controller"
-DEFAULT_DRIVE_COMMAND_TOPIC = "/rover_control/command_control/ground_station_drive"
-DEFAULT_TOWER_PAN_TILT_COMMAND_TOPIC = "/rover_control/tower/pan_tilt/control"
-DEFAULT_CHASSIS_PAN_TILT_COMMAND_TOPIC = "/rover_control/chassis/pan_tilt/control"
+DEFAULT_DRIVE_COMMAND_TOPIC = "command_control/ground_station_drive"
+DEFAULT_TOWER_PAN_TILT_COMMAND_TOPIC = "tower/pan_tilt/control"
+DEFAULT_CHASSIS_PAN_TILT_COMMAND_TOPIC = "chassis/pan_tilt/control"
 
 DRIVE_COMMAND_HERTZ = 20
 
@@ -181,9 +182,10 @@ class DriveAndCameraControlSender(QtCore.QThread):
 
         # ########## Class Variables ##########
         # Publishers
-        self.drive_command_publisher = rospy.Publisher(DEFAULT_DRIVE_COMMAND_TOPIC, DriveCommandMessage, queue_size=1)
-        self.tower_pan_tilt_command_publisher = rospy.Publisher(DEFAULT_TOWER_PAN_TILT_COMMAND_TOPIC,TowerPanTiltControlMessage, queue_size=1)
-        self.chassis_pan_tilt_command_publisher = rospy.Publisher(DEFAULT_CHASSIS_PAN_TILT_COMMAND_TOPIC, TowerPanTiltControlMessage, queue_size=1)
+        self.drive_command_publisher = rclpy.create_publisher(DEFAULT_DRIVE_COMMAND_TOPIC, DriveCommandMessage) #originally had queue size of 1 - look into docs here for
+        #queue size in ros 2: https://answers.ros.org/question/315920/how-to-add-queue-size-in-rclpycreate_publisher/
+        self.tower_pan_tilt_command_publisher = rclpy.create_publisher(DEFAULT_TOWER_PAN_TILT_COMMAND_TOPIC,TowerPanTiltControlMessage)
+        self.chassis_pan_tilt_command_publisher = rclpy.create_publisher(DEFAULT_CHASSIS_PAN_TILT_COMMAND_TOPIC, TowerPanTiltControlMessage)
 
         self.current_pan_tilt_selection = "no_pan_tilt"
 
