@@ -103,7 +103,7 @@ class GroundStation(QtCore.QObject):
                                            self.RIGHT_SCREEN_ID)  # type: ApplicationWindow
 
         # ###### Initialize + create the Ground Station Node ######
-        rclpy.init(args=args)
+        rclpy.init(args= None)
         groundstation = rclpy.create_node("groundstation")
 
         # ##### Instantiate Regular Classes ######
