@@ -89,7 +89,7 @@ class DriveControl(Node):
         self.connect_to_bogie()
 
         self.drive_control_subscriber = \
-            self.create_subscription(DriveControlMessage, self.drive_control_subscriber_topic, self.drive_control_callback, 10)
+            self.create_subscription(DriveControlMessage, self.drive_control_subscriber_topic, self.drive_control_callback, 1)
 
         self.drive_control_status_publisher = self.create_publisher(DriveStatusMessage, self.drive_control_status_topic, 1)
 
