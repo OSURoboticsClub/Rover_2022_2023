@@ -5,28 +5,29 @@
 import sys
 from PyQt5 import QtWidgets, QtCore, QtGui, uic
 import signal
-import rospy
+import rclpy
+from rclpy.node import Node
 import logging
 import qdarkstyle
 
 
 # Custom Imports
-import Framework.StartupSystems.ROSMasterChecker as ROSMasterChecker
+#import Framework.StartupSystems.ROSMasterChecker as ROSMasterChecker
 import Framework.LoggingSystems.Logger as Logger
-import Framework.VideoSystems.RoverVideoCoordinator as RoverVideoCoordinator
-import Framework.MapSystems.RoverMapCoordinator as RoverMapCoordinator
+#import Framework.VideoSystems.RoverVideoCoordinator as RoverVideoCoordinator
+#import Framework.MapSystems.RoverMapCoordinator as RoverMapCoordinator
 import Framework.ControlSystems.DriveAndCameraControlSender as JoystickControlSender
-import Framework.ControlSystems.EffectorsAndArmControlSender as ControllerControlSender
-import Framework.NavigationSystems.SpeedAndHeadingIndication as SpeedAndHeading
-import Framework.NavigationSystems.WaypointsCoordinator as WaypointsCoordinator
-import Framework.ArmSystems.ArmIndication as ArmIndication
-import Framework.StatusSystems.StatusCore as StatusCore
-import Framework.StatusSystems.UbiquitiStatusCore as UbiquitiStatusCore
-import Framework.SettingsSystems.UbiquitiRadioSettings as UbiquitiRadioSettings
-import Framework.MiscSystems.MiningCore as MiningCore
-import Framework.MiscSystems.BashConsoleCore as BashConsoleCore
-import Framework.MiscSystems.MiscArmCore as MiscArmCore
-import Framework.MiscSystems.RDFCore as RDFCore
+#import Framework.ControlSystems.EffectorsAndArmControlSender as ControllerControlSender
+#import Framework.NavigationSystems.SpeedAndHeadingIndication as SpeedAndHeading
+#import Framework.NavigationSystems.WaypointsCoordinator as WaypointsCoordinator
+#import Framework.ArmSystems.ArmIndication as ArmIndication
+#import Framework.StatusSystems.StatusCore as StatusCore
+#import Framework.StatusSystems.UbiquitiStatusCore as UbiquitiStatusCore
+#import Framework.SettingsSystems.UbiquitiRadioSettings as UbiquitiRadioSettings
+#import Framework.MiscSystems.MiningCore as MiningCore
+#import Framework.MiscSystems.BashConsoleCore as BashConsoleCore
+#import Framework.MiscSystems.MiscArmCore as MiscArmCore
+#import Framework.MiscSystems.RDFCore as RDFCore
 
 #####################################
 # Global Variables
@@ -101,39 +102,31 @@ class GroundStation(QtCore.QObject):
             self.create_application_window(UI_FILE_RIGHT, "Rover Ground Station Right Screen",
                                            self.RIGHT_SCREEN_ID)  # type: ApplicationWindow
 
-        # ###### Initialize the Ground Station Node ######
-        rospy.init_node("ground_station")
+        # ###### Initialize + create the Ground Station Node ######
+        rclpy.init(args= None)
+        groundstation = rclpy.create_node("groundstation")
 
         # ##### Instantiate Regular Classes ######
-        self.__add_non_thread("Mining System", MiningCore.Mining(self.shared_objects))
-        self.__add_non_thread("Arm Indication", ArmIndication.ArmIndication(self.shared_objects))
+        #self.__add_non_thread("Mining System", MiningCore.Mining(self.shared_objects))
+        #self.__add_non_thread("Arm Indication", ArmIndication.ArmIndication(self.shared_objects))
 
         # ##### Instantiate Threaded Classes ######
-        self.__add_thread("Video Coordinator", RoverVideoCoordinator.RoverVideoCoordinator(self.shared_objects))
-        self.__add_thread("Map Coordinator", RoverMapCoordinator.RoverMapCoordinator(self.shared_objects))
+        #self.__add_thread("Video Coordinator", RoverVideoCoordinator.RoverVideoCoordinator(self.shared_objects))
+        #self.__add_thread("Map Coordinator", RoverMapCoordinator.RoverMapCoordinator(self.shared_objects))
         self.__add_thread("Joystick Sender", JoystickControlSender.DriveAndCameraControlSender(self.shared_objects))
-        self.__add_thread("Controller Sender", ControllerControlSender.EffectorsAndArmControlSender(self.shared_objects))
-        self.__add_thread("Speed and Heading", SpeedAndHeading.SpeedAndHeadingIndication(self.shared_objects))
-        self.__add_thread("Rover Status", StatusCore.SensorCore(self.shared_objects))
-        self.__add_thread("Ubiquiti Status", UbiquitiStatusCore.UbiquitiStatus(self.shared_objects))
-        self.__add_thread("Ubiquiti Radio Settings", UbiquitiRadioSettings.UbiquitiRadioSettings(self.shared_objects))
-        self.__add_thread("Waypoints Coordinator", WaypointsCoordinator.WaypointsCoordinator(self.shared_objects))
-        self.__add_thread("Bash Console", BashConsoleCore.BashConsole(self.shared_objects))
-        self.__add_thread("Misc Arm", MiscArmCore.MiscArm(self.shared_objects))
-        self.__add_thread("RDF", RDFCore.RDF(self.shared_objects))
+        #self.__add_thread("Controller Sender", ControllerControlSender.EffectorsAndArmControlSender(self.shared_objects))
+        #self.__add_thread("Speed and Heading", SpeedAndHeading.SpeedAndHeadingIndication(self.shared_objects))
+        #self.__add_thread("Rover Status", StatusCore.SensorCore(self.shared_objects))
+        #self.__add_thread("Ubiquiti Status", UbiquitiStatusCore.UbiquitiStatus(self.shared_objects))
+        #self.__add_thread("Ubiquiti Radio Settings", UbiquitiRadioSettings.UbiquitiRadioSettings(self.shared_objects))
+        #self.__add_thread("Waypoints Coordinator", WaypointsCoordinator.WaypointsCoordinator(self.shared_objects))
+        #self.__add_thread("Bash Console", BashConsoleCore.BashConsole(self.shared_objects))
+        #self.__add_thread("Misc Arm", MiscArmCore.MiscArm(self.shared_objects))
+        #self.__add_thread("RDF", RDFCore.RDF(self.shared_objects))
 
         self.connect_signals_and_slots_signal.emit()
         self.__connect_signals_to_slots()
         self.start_threads_signal.emit()
-
-    def ___ros_master_running(self):
-        checker = ROSMasterChecker.ROSMasterChecker()
-
-        if not checker.master_present(5):
-            self.logger.debug("ROS Master Not Found!!!! Exiting!!!")
-            QtGui.QGuiApplication.exit()
-            return False
-        return True
 
     def __add_thread(self, thread_name, instance):
         self.shared_objects["threaded_classes"][thread_name] = instance
@@ -191,6 +184,10 @@ if __name__ == "__main__":
     QtCore.QCoreApplication.setOrganizationDomain("http://osurobotics.club/")
     QtCore.QCoreApplication.setApplicationName("groundstation")
 
+    """
+    # ROS master/roscore is no longer in ROS 2. ROS 2 is peer-to-peer! #
+    # TODO - ros 2 has a function to get a list of discovered nodes. Maybe set a timeout and if that list returns empty after a certain timeframe
+    # prompt user to verify connection between the groundstation and the rover
     # ########## Check ROS Master Status ##########
     master_checker = ROSMasterChecker.ROSMasterChecker()
 
@@ -201,6 +198,7 @@ if __name__ == "__main__":
                             "Ensure ROS master is running or check for network issues.")
         message_box.exec_()
         exit()
+    """
 
     # ########## Start Ground Station If Ready ##########
     ground_station = GroundStation()
