@@ -85,7 +85,7 @@ class ChassisPanTiltControl(Node):
 
         self.pan_tilt_control_subscriber = self.create_subscription(TowerPanTiltControlMessage,
                                                                     self.pan_tilt_control_subscriber_topic,
-                                                                    self.pan_tilt_control_callback, 10)
+                                                                    self.pan_tilt_control_callback, 1)
 
         self.pan_tilt_control_message = None
         self.new_pan_tilt_control_message = False
