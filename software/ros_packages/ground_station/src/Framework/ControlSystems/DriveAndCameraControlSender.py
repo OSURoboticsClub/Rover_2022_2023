@@ -163,7 +163,7 @@ class DriveAndCameraControlSender(QtCore.QThread):
 
         # ########## Reference to class init variables ##########
         self.shared_objects = shared_objects
-        self.video_coordinator = self.shared_objects["threaded_classes"]["Video Coordinator"]
+        #self.video_coordinator = self.shared_objects["threaded_classes"]["Video Coordinator"]
         self.right_screen = self.shared_objects["screens"]["right_screen"]
         self.rover_speed_limit_slider = self.right_screen.rover_speed_limit_slider  # type: QtWidgets.QSlider
         self.left_drive_progress_bar = self.right_screen.left_drive_progress_bar  # type: QtWidgets.QProgressBar
@@ -179,13 +179,16 @@ class DriveAndCameraControlSender(QtCore.QThread):
         self.run_thread_flag = True
 
         self.joystick = LogitechJoystick()
+        
+        
+        # ########## Create Coordinator Node ########
+        self.joystick_node = Node("joystick_node")
 
         # ########## Class Variables ##########
         # Publishers
-        self.drive_command_publisher = rclpy.create_publisher(DEFAULT_DRIVE_COMMAND_TOPIC, DriveCommandMessage) #originally had queue size of 1 - look into docs here for
-        #queue size in ros 2: https://answers.ros.org/question/315920/how-to-add-queue-size-in-rclpycreate_publisher/
-        self.tower_pan_tilt_command_publisher = rclpy.create_publisher(DEFAULT_TOWER_PAN_TILT_COMMAND_TOPIC,TowerPanTiltControlMessage)
-        self.chassis_pan_tilt_command_publisher = rclpy.create_publisher(DEFAULT_CHASSIS_PAN_TILT_COMMAND_TOPIC, TowerPanTiltControlMessage)
+        self.drive_command_publisher = self.joystick_node.create_publisher(DriveCommandMessage, DEFAULT_DRIVE_COMMAND_TOPIC, 1)
+        self.tower_pan_tilt_command_publisher = self.joystick_node.create_publisher(TowerPanTiltControlMessage, DEFAULT_TOWER_PAN_TILT_COMMAND_TOPIC, 1)
+        self.chassis_pan_tilt_command_publisher = self.joystick_node.create_publisher(TowerPanTiltControlMessage, DEFAULT_TOWER_PAN_TILT_COMMAND_TOPIC, 1)
 
         self.current_pan_tilt_selection = "no_pan_tilt"
 
@@ -222,7 +225,7 @@ class DriveAndCameraControlSender(QtCore.QThread):
         self.set_left_drive_output__signal.connect(self.left_drive_progress_bar.setValue)
         self.set_right_drive_output__signal.connect(self.right_drive_progress_bar.setValue)
 
-        self.video_coordinator.pan_tilt_selection_changed__signal.connect(self.on_pan_tilt_selection_changed__slot)
+        #self.video_coordinator.pan_tilt_selection_changed__signal.connect(self.on_pan_tilt_selection_changed__slot)
         self.rover_speed_limit_slider.valueChanged.connect(self.on_speed_limit_slider_value_changed__slot)
 
     def check_and_set_pause_state(self):
@@ -335,3 +338,4 @@ class DriveAndCameraControlSender(QtCore.QThread):
 
     def on_kill_threads_requested__slot(self):
         self.run_thread_flag = False
+        self.joystick_node.destroy_node() #destroy node on shutdown

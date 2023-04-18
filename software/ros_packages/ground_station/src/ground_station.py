@@ -104,7 +104,6 @@ class GroundStation(QtCore.QObject):
 
         # ###### Initialize + create the Ground Station Node ######
         rclpy.init(args= None)
-        groundstation = rclpy.create_node("groundstation")
 
         # ##### Instantiate Regular Classes ######
         #self.__add_non_thread("Mining System", MiningCore.Mining(self.shared_objects))
@@ -146,7 +145,8 @@ class GroundStation(QtCore.QObject):
         # Wait for Threads
         for thread in self.shared_objects["threaded_classes"]:
             self.shared_objects["threaded_classes"][thread].wait()
-
+            
+        rclpy.shutdown()
         QtGui.QGuiApplication.exit()
 
     @staticmethod

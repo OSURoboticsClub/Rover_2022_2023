@@ -6,11 +6,12 @@ from PyQt5 import QtCore, QtWidgets
 import logging
 from time import time
 
-import rospy
+import rclpy
+from rclpy.node import Node
 
 # Custom Imports
 import RoverVideoReceiver
-from rover_camera.msg import CameraControlMessage
+from rover2_camera_interface.msg import CameraControlMessage
 
 #####################################
 # Global Variables
@@ -85,10 +86,14 @@ class RoverVideoCoordinator(QtCore.QThread):
         reset_camera_message.enable_small_broadcast = True
 
         # Reset default cameras
-        rospy.Publisher("/cameras/chassis/camera_control", CameraControlMessage, queue_size=1).publish(reset_camera_message)
-        rospy.Publisher("/cameras/undercarriage/camera_control", CameraControlMessage, queue_size=1).publish(reset_camera_message)
-        rospy.Publisher("/cameras/main_navigation/camera_control", CameraControlMessage, queue_size=1).publish(reset_camera_message)
-        rospy.Publisher("/cameras/end_effector/camera_control", CameraControlMessage, queue_size=1).publish(reset_camera_message)
+        self.chassis_publisher = rclpy.create_publisher("/cameras/chassis/camera_control", CameraControlMessage)
+        self.chassis_publisher.publish(reset_camera_message)
+        self.under_publisher = rclpy.create_publisher("/cameras/undercarriage/camera_control", CameraControlMessage)
+        self.under_publisher.publish(reset_camera_message)
+        self.nav_publisher = rclpy.create_publisher("/cameras/main_navigation/camera_control", CameraControlMessage)
+        self.nav_publisher.publish(reset_camera_message)
+        self.effector_publisher = rclpy.create_publisher("/cameras/end_effector/camera_control", CameraControlMessage)
+        self.effector_publisher.publish(reset_camera_message)
 
         self.msleep(3000)
 
@@ -200,7 +205,8 @@ class RoverVideoCoordinator(QtCore.QThread):
         self.last_gui_selection_changed_time = time()
 
     def __get_cameras(self):
-        topics = rospy.get_published_topics(CAMERA_TOPIC_PATH)
+        #topics = rospy.get_published_topics(CAMERA_TOPIC_PATH)
+        #replace this with get_publishers_info_by_topic + pass in camera topic
 
         names = []
 
