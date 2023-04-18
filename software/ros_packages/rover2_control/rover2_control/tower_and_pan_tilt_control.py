@@ -110,10 +110,10 @@ class TowerPanTiltControl(Node):
 
         self.pan_tilt_control_subscriber = self.create_subscription(TowerPanTiltControlMessage, 
                                                                 self.pan_tilt_control_subscriber_topic,
-                                                                self.pan_tilt_control_callback, 10)
+                                                                self.pan_tilt_control_callback, 1)
 
         self.tower_light_control_subscriber = self.create_subscription(UInt8, self.tower_light_control_subscriber_topic,
-                                                                self.tower_light_control_callback, 10)
+                                                                self.tower_light_control_callback, 1)
 
         self.tower_co2_publisher = self.create_publisher(UInt16, self.tower_co2_publisher_topic, 1)
 
