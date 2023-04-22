@@ -16,7 +16,7 @@ import qdarkstyle
 import Framework.LoggingSystems.Logger as Logger
 #import Framework.VideoSystems.RoverVideoCoordinator as RoverVideoCoordinator
 #import Framework.MapSystems.RoverMapCoordinator as RoverMapCoordinator
-import Framework.ControlSystems.DriveAndCameraControlSender as JoystickControlSender
+#import Framework.ControlSystems.DriveAndCameraControlSender as JoystickControlSender
 #import Framework.ControlSystems.EffectorsAndArmControlSender as ControllerControlSender
 #import Framework.NavigationSystems.SpeedAndHeadingIndication as SpeedAndHeading
 #import Framework.NavigationSystems.WaypointsCoordinator as WaypointsCoordinator
@@ -28,6 +28,7 @@ import Framework.ControlSystems.DriveAndCameraControlSender as JoystickControlSe
 #import Framework.MiscSystems.BashConsoleCore as BashConsoleCore
 #import Framework.MiscSystems.MiscArmCore as MiscArmCore
 #import Framework.MiscSystems.RDFCore as RDFCore
+import Framework.MiscSystems.TrackingCoordinator as TrackCoordinator
 
 #####################################
 # Global Variables
@@ -104,7 +105,7 @@ class GroundStation(QtCore.QObject):
         self.shared_objects["screens"]["right_screen"] = \
             self.create_application_window(UI_FILE_RIGHT, "Rover Ground Station Right Screen",
                                            self.RIGHT_SCREEN_ID)  # type: ApplicationWindow
-        """
+	"""
 
         # ###### Initialize rclpy ######
         rclpy.init(args= None)
@@ -126,6 +127,7 @@ class GroundStation(QtCore.QObject):
         #self.__add_thread("Bash Console", BashConsoleCore.BashConsole(self.shared_objects))
         #self.__add_thread("Misc Arm", MiscArmCore.MiscArm(self.shared_objects))
         #self.__add_thread("RDF", RDFCore.RDF(self.shared_objects))
+        self.__add_thread("Tracking", TrackCoordinator.TrackingCore(self.shared_objects))
 
         self.connect_signals_and_slots_signal.emit()
         self.__connect_signals_to_slots()
