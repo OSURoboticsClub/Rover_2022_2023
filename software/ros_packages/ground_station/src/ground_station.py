@@ -34,6 +34,7 @@ import Framework.ControlSystems.DriveAndCameraControlSender as JoystickControlSe
 #####################################
 UI_FILE_LEFT = "Resources/Ui/left_screen.ui"
 UI_FILE_RIGHT = "Resources/Ui/right_screen.ui"
+UI_FILE_SINGLE = "Resources/Ui/single_screen.ui"
 
 #####################################
 # Class Organization
@@ -94,6 +95,8 @@ class GroundStation(QtCore.QObject):
         }
 
         # ###### Instantiate Left And Right Screens ######
+        self.shared_objects["screens"]["onescreen"] = self.create_application_window(UI_FILE_LEFT, "Rover Ground Station Left Screen", self.LEFT_SCREEN_ID)
+        """
         self.shared_objects["screens"]["left_screen"] = \
             self.create_application_window(UI_FILE_LEFT, "Rover Ground Station Left Screen",
                                            self.LEFT_SCREEN_ID)  # type: ApplicationWindow
@@ -101,8 +104,9 @@ class GroundStation(QtCore.QObject):
         self.shared_objects["screens"]["right_screen"] = \
             self.create_application_window(UI_FILE_RIGHT, "Rover Ground Station Right Screen",
                                            self.RIGHT_SCREEN_ID)  # type: ApplicationWindow
+        """
 
-        # ###### Initialize + create the Ground Station Node ######
+        # ###### Initialize rclpy ######
         rclpy.init(args= None)
 
         # ##### Instantiate Regular Classes ######
@@ -112,7 +116,7 @@ class GroundStation(QtCore.QObject):
         # ##### Instantiate Threaded Classes ######
         #self.__add_thread("Video Coordinator", RoverVideoCoordinator.RoverVideoCoordinator(self.shared_objects))
         #self.__add_thread("Map Coordinator", RoverMapCoordinator.RoverMapCoordinator(self.shared_objects))
-        self.__add_thread("Joystick Sender", JoystickControlSender.DriveAndCameraControlSender(self.shared_objects))
+        #self.__add_thread("Joystick Sender", JoystickControlSender.DriveAndCameraControlSender(self.shared_objects))
         #self.__add_thread("Controller Sender", ControllerControlSender.EffectorsAndArmControlSender(self.shared_objects))
         #self.__add_thread("Speed and Heading", SpeedAndHeading.SpeedAndHeadingIndication(self.shared_objects))
         #self.__add_thread("Rover Status", StatusCore.SensorCore(self.shared_objects))
@@ -136,8 +140,9 @@ class GroundStation(QtCore.QObject):
         self.shared_objects["regular_classes"][name] = instance
 
     def __connect_signals_to_slots(self):
-        self.shared_objects["screens"]["left_screen"].exit_requested_signal.connect(self.on_exit_requested__slot)
-        self.shared_objects["screens"]["right_screen"].exit_requested_signal.connect(self.on_exit_requested__slot)
+    	self.shared_objects["screens"]["onescreen"].exit_requested_signal.connect(self.on_exit_requested__slot)
+        #self.shared_objects["screens"]["left_screen"].exit_requested_signal.connect(self.on_exit_requested__slot)
+        #self.shared_objects["screens"]["right_screen"].exit_requested_signal.connect(self.on_exit_requested__slot)
 
     def on_exit_requested__slot(self):
         self.kill_threads_signal.emit()
