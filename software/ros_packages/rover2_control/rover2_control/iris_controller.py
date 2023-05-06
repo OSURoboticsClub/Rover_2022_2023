@@ -140,8 +140,8 @@ class IrisController(Node):
             if left_y_axis == 0 and right_y_axis == 0:
                 command.controller_present = False
                 command.ignore_drive_control = True
-                command.drive_twist.linear.x = 0
-                command.drive_twist.angular.z = 0
+                command.drive_twist.linear.x = 0.0
+                command.drive_twist.angular.z = 0.0
             else:
 
                 left = (left_y_axis - SBUS_VALUES["SBUS_MID"]) / SBUS_VALUES[
