@@ -28,7 +28,7 @@ import Framework.ControlSystems.DriveAndCameraControlSender as JoystickControlSe
 #import Framework.MiscSystems.BashConsoleCore as BashConsoleCore
 #import Framework.MiscSystems.MiscArmCore as MiscArmCore
 #import Framework.MiscSystems.RDFCore as RDFCore
-#import Framework.MiscSystems.TrackingCoordinator as TrackCoordinator
+import Framework.MiscSystems.TrackingCoordinator as TrackCoordinator
 
 #####################################
 # Global Variables

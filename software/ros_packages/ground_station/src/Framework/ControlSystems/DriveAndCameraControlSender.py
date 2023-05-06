@@ -212,6 +212,9 @@ class DriveAndCameraControlSender(QtCore.QThread):
 
             self.check_and_set_pause_state()
             self.__update_and_publish()
+            
+            
+            rclpy.spin_once(self.joystick_node, executor = None, timeout_sec = self.wait_time)
 
             time_diff = time() - start_time
 
