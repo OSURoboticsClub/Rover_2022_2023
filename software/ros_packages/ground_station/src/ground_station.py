@@ -28,12 +28,14 @@ import Framework.ControlSystems.DriveAndCameraControlSender as JoystickControlSe
 #import Framework.MiscSystems.BashConsoleCore as BashConsoleCore
 #import Framework.MiscSystems.MiscArmCore as MiscArmCore
 #import Framework.MiscSystems.RDFCore as RDFCore
+import Framework.MiscSystems.TrackingCoordinator as TrackCoordinator
 
 #####################################
 # Global Variables
 #####################################
 UI_FILE_LEFT = "Resources/Ui/left_screen.ui"
 UI_FILE_RIGHT = "Resources/Ui/right_screen.ui"
+UI_FILE_SINGLE = "Resources/Ui/single_screen.ui"
 
 #####################################
 # Class Organization
@@ -94,6 +96,9 @@ class GroundStation(QtCore.QObject):
         }
 
         # ###### Instantiate Left And Right Screens ######
+        """
+        self.shared_objects["screens"]["onescreen"] = self.create_application_window(UI_FILE_LEFT, "Rover Ground Station Left Screen", self.LEFT_SCREEN_ID)
+        """
         self.shared_objects["screens"]["left_screen"] = \
             self.create_application_window(UI_FILE_LEFT, "Rover Ground Station Left Screen",
                                            self.LEFT_SCREEN_ID)  # type: ApplicationWindow
@@ -102,9 +107,8 @@ class GroundStation(QtCore.QObject):
             self.create_application_window(UI_FILE_RIGHT, "Rover Ground Station Right Screen",
                                            self.RIGHT_SCREEN_ID)  # type: ApplicationWindow
 
-        # ###### Initialize + create the Ground Station Node ######
+        # ###### Initialize rclpy ######
         rclpy.init(args= None)
-        groundstation = rclpy.create_node("groundstation")
 
         # ##### Instantiate Regular Classes ######
         #self.__add_non_thread("Mining System", MiningCore.Mining(self.shared_objects))
@@ -123,6 +127,7 @@ class GroundStation(QtCore.QObject):
         #self.__add_thread("Bash Console", BashConsoleCore.BashConsole(self.shared_objects))
         #self.__add_thread("Misc Arm", MiscArmCore.MiscArm(self.shared_objects))
         #self.__add_thread("RDF", RDFCore.RDF(self.shared_objects))
+        #self.__add_thread("Tracking", TrackCoordinator.TrackingCore(self.shared_objects))
 
         self.connect_signals_and_slots_signal.emit()
         self.__connect_signals_to_slots()
@@ -137,6 +142,7 @@ class GroundStation(QtCore.QObject):
         self.shared_objects["regular_classes"][name] = instance
 
     def __connect_signals_to_slots(self):
+    	#self.shared_objects["screens"]["onescreen"].exit_requested_signal.connect(self.on_exit_requested__slot)
         self.shared_objects["screens"]["left_screen"].exit_requested_signal.connect(self.on_exit_requested__slot)
         self.shared_objects["screens"]["right_screen"].exit_requested_signal.connect(self.on_exit_requested__slot)
 
@@ -146,7 +152,8 @@ class GroundStation(QtCore.QObject):
         # Wait for Threads
         for thread in self.shared_objects["threaded_classes"]:
             self.shared_objects["threaded_classes"][thread].wait()
-
+            
+        rclpy.shutdown()
         QtGui.QGuiApplication.exit()
 
     @staticmethod

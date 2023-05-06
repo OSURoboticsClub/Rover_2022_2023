@@ -1553,7 +1553,7 @@ N/A</string>
              </layout>
             </item>
             <item row="8" column="0">
-             <widget class="QPushButton" name="manual_angle_pb_2">
+             <widget class="QPushButton" name="manual_angle_pb">
               <property name="text">
                <string>Send Angle</string>
               </property>
@@ -1619,7 +1619,7 @@ N/A</string>
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QLabel" name="rover_lon_2">
+                 <widget class="QLabel" name="rover_lon">
                   <property name="text">
                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;-1&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                   </property>
@@ -1642,7 +1642,7 @@ N/A</string>
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QLabel" name="base_lon_2">
+                 <widget class="QLabel" name="base_lon">
                   <property name="text">
                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;-1&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                   </property>
@@ -1676,7 +1676,7 @@ N/A</string>
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QLabel" name="rover_lat_2">
+                 <widget class="QLabel" name="rover_lat">
                   <property name="text">
                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;-1&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                   </property>
@@ -1702,7 +1702,7 @@ N/A</string>
                  </spacer>
                 </item>
                 <item>
-                 <widget class="QLabel" name="base_lat_2">
+                 <widget class="QLabel" name="base_lat">
                   <property name="text">
                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;-1&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                   </property>
@@ -1745,7 +1745,7 @@ N/A</string>
             <item row="7" column="0">
              <layout class="QGridLayout" name="gridLayout_27">
               <item row="0" column="2">
-               <widget class="QLineEdit" name="manual_angle_text_2"/>
+               <widget class="QLineEdit" name="manual_angle_text"/>
               </item>
               <item row="0" column="1">
                <spacer name="horizontalSpacer_30">
