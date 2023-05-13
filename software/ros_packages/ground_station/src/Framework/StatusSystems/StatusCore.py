@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import rospy
-from rover_status.msg import *
+import rclpy
+from rclpy.node import Node
+from rover2_status_interface.msg import *
 from PyQt5 import QtWidgets, QtCore, QtGui, uic
 from std_msgs.msg import Empty
 import PIL.Image
@@ -118,13 +119,21 @@ class SensorCore(QtCore.QThread):
 
         # ########## subscriptions pulling data from system_statuses_node.py ##########
         # ########## system_statuses_node.py found under ros_packages/rover_status/src
-        self.camera_status = rospy.Subscriber(CAMERA_TOPIC_NAME, CameraStatuses, self.__camera_callback)
-        self.frsky_status = rospy.Subscriber(FRSKY_TOPIC_NAME, FrSkyStatus, self.__frsky_callback)
-        self.gps_status = rospy.Subscriber(GPS_TOPIC_NAME, GPSInfo, self.__gps_callback)
-        self.jetson_status = rospy.Subscriber(JETSON_TOPIC_NAME, JetsonInfo, self.__jetson_callback)
-        self.misc_status = rospy.Subscriber(MISC_TOPIC_NAME, MiscStatuses, self.__misc_callback)
-        self.battery_status = rospy.Subscriber(BATTERY_TOPIC_NAME, BatteryStatusMessage, self.__battery_callback)
-        self.co2_status = rospy.Subscriber(CO2_TOPIC_NAME, UInt16, self.__co2_callback)
+        #self.camera_status = rospy.Subscriber(CAMERA_TOPIC_NAME, CameraStatuses, self.__camera_callback)
+        #self.frsky_status = rospy.Subscriber(FRSKY_TOPIC_NAME, FrSkyStatus, self.__frsky_callback)
+        #self.gps_status = rospy.Subscriber(GPS_TOPIC_NAME, GPSInfo, self.__gps_callback)
+        #self.jetson_status = rospy.Subscriber(JETSON_TOPIC_NAME, JetsonInfo, self.__jetson_callback)
+        #self.misc_status = rospy.Subscriber(MISC_TOPIC_NAME, MiscStatuses, self.__misc_callback)
+        #self.battery_status = rospy.Subscriber(BATTERY_TOPIC_NAME, BatteryStatusMessage, self.__battery_callback)
+        #self.co2_status = rospy.Subscriber(CO2_TOPIC_NAME, UInt16, self.__co2_callback)
+        self.camera_status = rclpy.create_subscription(CameraStatuses, CAMERA_TOPIC_NAME, self.__camera_callback, 1)
+        self.frsky_status = rclpy.create_subscription(FrSkyStatus, FRSKY_TOPIC_NAME, self.__frsky_callback, 1)
+        self.gps_status = rclpy.create_subscription(GPSInfo, GPS_TOPIC_NAME, self.__gps_callback, 1)
+        self.jetson_status = rclpy.create_subscription(JetsonInfo, JETSON_TOPIC_NAME, self.__jetson_callback, 1)
+        self.misc_status = rclpy.create_subscription(MiscStatuses, MISC_TOPIC_NAME, self.__misc_callback, 1)
+        self.battery_status = rclpy.create_subscription(BatteryStatusMessage, BATTERY_TOPIC_NAME, self.__battery_callback, 1)
+        self.co2_status = rclpy.create_subscription(UInt16, CO2_TOPIC_NAME, self.__co2_callback, 1)
+
 
         self.camera_msg = CameraStatuses()
         self.bogie_msg = None  # BogieStatuses()
@@ -134,7 +143,8 @@ class SensorCore(QtCore.QThread):
         self.misc_msg = MiscStatuses()
         self.battery_msg = BatteryStatusMessage()
 
-        self.update_requester = rospy.Publisher(REQUEST_UPDATE_TOPIC, Empty, queue_size=10)
+        #self.update_requester = rospy.Publisher(REQUEST_UPDATE_TOPIC, Empty, queue_size=10)
+        self.update_requester = rclpy.create_publisher(Empty, REQUEST_UPDATE_TOPIC, 1)
 
         # Apply OSURC Logo
         self.osurc_logo_pil = PIL.Image.open("Resources/Images/osurclogo.png").resize((210, 75), PIL.Image.BICUBIC)
@@ -162,6 +172,8 @@ class SensorCore(QtCore.QThread):
 
         self.low_battery_warning_last_shown = 0
         self.critical_battery_warning_last_shown = 0
+        self.wait_time = 1/20 # for rclpy.spin_once
+        self.status_core_node = Node("status_core_node") # don't really know what I'm doing
 
     def __camera_callback(self, data):
         self.camera_msg.camera_zed = data.camera_zed
@@ -316,6 +328,7 @@ class SensorCore(QtCore.QThread):
         while self.run_thread_flag:
             # self.update_requester.publish(Empty())
             self.__display_time()
+            rclpy.spin_once(self.status_core_node, executor = None, timeout_sec = self.wait_time)
             self.msleep(1000)
 
     def connect_signals_and_slots(self):

@@ -9,13 +9,14 @@ import numpy as np
 import qimage2ndarray
 from time import time
 
-import rospy
+import rclpy
+from rclpy.node import Node
 import dynamic_reconfigure.client
 from cv_bridge import CvBridge
 from sensor_msgs.msg import CompressedImage
 
 # Custom Imports
-from rover_camera.msg import CameraControlMessage
+from rover2_camera_interface.msg import CameraControlMessage
 
 #####################################
 # Global Variables
@@ -60,17 +61,23 @@ class RoverVideoReceiver(QtCore.QThread):
         # ########## Thread Flags ##########
         self.run_thread_flag = True
 
+        # ########## Create Receiver Node ############
+        self.video_receiver_node = Node("video_receiver_node")
+
         # ########## Class Variables ##########
         self.camera_title_name = self.camera_name.replace("_", " ").title()
 
         self.topic_base_path = CAMERA_TOPIC_PATH + self.camera_name
         self.control_topic_path = self.topic_base_path + "/camera_control"
+        self.wait_time = 1/20
 
         # Subscription variables
         self.video_subscribers = []
 
         # Publisher variables
-        self.camera_control_publisher = rospy.Publisher(self.control_topic_path, CameraControlMessage, queue_size=1)
+        #ROS1 CODE: self.camera_control_publisher = rospy.Publisher(self.control_topic_path, CameraControlMessage, queue_size=1)
+        #ROS2 CODE BELOW: (not sure if works, -Matthew)
+        self.camera_control_publisher = rclpy.create_publisher(CameraControlMessage, self.control_topic_path, 1)
 
         # Set up resolution mappings
         self.RESOLUTION_MAPPINGS[(1280, 720)] = CameraControlMessage()
@@ -115,9 +122,12 @@ class RoverVideoReceiver(QtCore.QThread):
         self.__create_camera_name_opencv_images()
 
         # Attach subscribers now that everything is set up
-        self.video_subscribers.append(rospy.Subscriber(self.topic_base_path + "/image_1280x720/compressed", CompressedImage, self.__image_data_received_callback))
-        self.video_subscribers.append(rospy.Subscriber(self.topic_base_path + "/image_640x360/compressed", CompressedImage, self.__image_data_received_callback))
-        self.video_subscribers.append(rospy.Subscriber(self.topic_base_path + "/image_256x144/compressed", CompressedImage, self.__image_data_received_callback))
+        #rospy.Subscriber(self.topic_base_path + "/image_1280x720/compressed", CompressedImage, self.__image_data_received_callback)
+        self.video_subscribers.append(rclpy.create_subscription(CompressedImage, self.topic_base_path + "/image_1280x720/compressed", self.__image_data_received_callback, 1))
+        #rospy.Subscriber(self.topic_base_path + "/image_640x360/compressed", CompressedImage, self.__image_data_received_callback)
+        self.video_subscribers.append(rclpy.create_subscription(CompressedImage, self.topic_base_path + "/image_640x360/compressed", self.__image_data_received_callback, 1))
+        #rospy.Subscriber(self.topic_base_path + "/image_256x144/compressed", CompressedImage, self.__image_data_received_callback)
+        self.video_subscribers.append(rclpy.create_subscription(CompressedImage, self.topic_base_path + "/image_256x144/compressed", self.__image_data_received_callback, 1))
 
     def run(self):
         self.logger.debug("Starting \"%s\" Camera Thread" % self.camera_title_name)
@@ -125,12 +135,18 @@ class RoverVideoReceiver(QtCore.QThread):
         self.__enable_camera_resolution(self.RESOLUTION_OPTIONS[self.current_resolution_index])
 
         while self.run_thread_flag:
+            start_time = time()
+
             if self.video_enabled:
                 self.__show_video_enabled()
             else:
                 self.__show_video_disabled()
 
-            self.msleep(10)
+            rclpy.spin_once(self.video_receiver_node, executor = None, timeout_sec = self.wait_time)
+            # This ensures the while loop runs every 1/20th of a second regardless of how long the functions take
+            # to execute. (If I understand it right).
+            time_diff = time() - start_time
+            self.msleep(max(int(self.wait_time - time_diff), 0))
 
         self.logger.debug("Stopping \"%s\" Camera Thread" % self.camera_title_name)
 
