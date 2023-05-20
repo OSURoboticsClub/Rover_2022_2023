@@ -77,7 +77,7 @@ class RoverVideoReceiver(QtCore.QThread):
         # Publisher variables
         #ROS1 CODE: self.camera_control_publisher = rospy.Publisher(self.control_topic_path, CameraControlMessage, queue_size=1)
         #ROS2 CODE BELOW: (not sure if works, -Matthew)
-        self.camera_control_publisher = rclpy.create_publisher(CameraControlMessage, self.control_topic_path, 1)
+        self.camera_control_publisher = self.video_receiver_node.create_publisher(CameraControlMessage, self.control_topic_path, 1)
 
         # Set up resolution mappings
         self.RESOLUTION_MAPPINGS[(1280, 720)] = CameraControlMessage()
