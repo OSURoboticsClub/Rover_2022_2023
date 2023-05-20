@@ -16,7 +16,7 @@ import qdarkstyle
 import Framework.LoggingSystems.Logger as Logger
 #import Framework.VideoSystems.RoverVideoCoordinator as RoverVideoCoordinator
 #import Framework.MapSystems.RoverMapCoordinator as RoverMapCoordinator
-import Framework.ControlSystems.DriveAndCameraControlSender as JoystickControlSender
+#import Framework.ControlSystems.DriveAndCameraControlSender as JoystickControlSender
 #import Framework.ControlSystems.EffectorsAndArmControlSender as ControllerControlSender
 #import Framework.NavigationSystems.SpeedAndHeadingIndication as SpeedAndHeading
 #import Framework.NavigationSystems.WaypointsCoordinator as WaypointsCoordinator
@@ -96,9 +96,7 @@ class GroundStation(QtCore.QObject):
         }
 
         # ###### Instantiate Left And Right Screens ######
-        """
-        self.shared_objects["screens"]["onescreen"] = self.create_application_window(UI_FILE_LEFT, "Rover Ground Station Left Screen", self.LEFT_SCREEN_ID)
-        """
+        #self.shared_objects["screens"]["onescreen"] = self.create_application_window(UI_FILE_LEFT, "Rover Ground Station Left Screen", self.LEFT_SCREEN_ID)
         self.shared_objects["screens"]["left_screen"] = \
             self.create_application_window(UI_FILE_LEFT, "Rover Ground Station Left Screen",
                                            self.LEFT_SCREEN_ID)  # type: ApplicationWindow
@@ -106,6 +104,7 @@ class GroundStation(QtCore.QObject):
         self.shared_objects["screens"]["right_screen"] = \
             self.create_application_window(UI_FILE_RIGHT, "Rover Ground Station Right Screen",
                                            self.RIGHT_SCREEN_ID)  # type: ApplicationWindow
+       
 
         # ###### Initialize rclpy ######
         rclpy.init(args= None)
@@ -117,7 +116,7 @@ class GroundStation(QtCore.QObject):
         # ##### Instantiate Threaded Classes ######
         #self.__add_thread("Video Coordinator", RoverVideoCoordinator.RoverVideoCoordinator(self.shared_objects))
         #self.__add_thread("Map Coordinator", RoverMapCoordinator.RoverMapCoordinator(self.shared_objects))
-        self.__add_thread("Joystick Sender", JoystickControlSender.DriveAndCameraControlSender(self.shared_objects))
+        #self.__add_thread("Joystick Sender", JoystickControlSender.DriveAndCameraControlSender(self.shared_objects))
         #self.__add_thread("Controller Sender", ControllerControlSender.EffectorsAndArmControlSender(self.shared_objects))
         #self.__add_thread("Speed and Heading", SpeedAndHeading.SpeedAndHeadingIndication(self.shared_objects))
         #self.__add_thread("Rover Status", StatusCore.SensorCore(self.shared_objects))
@@ -127,7 +126,7 @@ class GroundStation(QtCore.QObject):
         #self.__add_thread("Bash Console", BashConsoleCore.BashConsole(self.shared_objects))
         #self.__add_thread("Misc Arm", MiscArmCore.MiscArm(self.shared_objects))
         #self.__add_thread("RDF", RDFCore.RDF(self.shared_objects))
-        #self.__add_thread("Tracking", TrackCoordinator.TrackingCore(self.shared_objects))
+        self.__add_thread("Tracking", TrackCoordinator.TrackingCore(self.shared_objects))
 
         self.connect_signals_and_slots_signal.emit()
         self.__connect_signals_to_slots()
@@ -165,8 +164,9 @@ class GroundStation(QtCore.QObject):
 
         app_window.setWindowFlags(app_window.windowFlags() |  # Sets the windows flags to:
                                   QtCore.Qt.FramelessWindowHint |  # remove the border and frame on the application,
-                                  QtCore.Qt.WindowStaysOnTopHint |  # and makes the window stay on top of all others
+                                  QtCore.Qt.WindowStaysOnTopHint | # and makes the window stay on top of all others
                                   QtCore.Qt.X11BypassWindowManagerHint)  # This is needed to show fullscreen in gnome
+                                    
 
         app_window.setGeometry(
             system_desktop.screenGeometry(display_screen))  # Sets the window to be on the first screen

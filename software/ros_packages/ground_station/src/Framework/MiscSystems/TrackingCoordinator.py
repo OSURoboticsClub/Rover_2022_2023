@@ -10,7 +10,7 @@ from multiprocessing.connection import Listener
 #Near Merryfield coordinates: 44.566890589052235, -123.27462028171236
 
 THREAD_HERTZ = 5
-left = "onescreen" #left_screen
+left =  "left_screen"
 
 #create threaded class to avoid blocking UI updates
 class TrackingCore(QtCore.QThread):
@@ -69,6 +69,7 @@ class TrackingCore(QtCore.QThread):
 		addr = ('localhost', 5000)
 		ui_listener = Listener(addr)
 		conn = ui_listener.accept() #accept conn from tracking algo
+		
 		msg = ""
 		while self.run_thread_flag:
 			start_time = time()
@@ -82,10 +83,8 @@ class TrackingCore(QtCore.QThread):
 					self.tracking_updates_callback(msg)
 		
 		
-		conn.close()
 		time_diff = time() - start_time
 		self.msleep(max(int(self.wait_time - time_diff), 0))
-
 		self.logger.debug("Stopping Tracking Thread")
 
             
@@ -149,4 +148,5 @@ class TrackingCore(QtCore.QThread):
 		
 	def on_kill_threads_requested__slot(self):
 		self.run_thread_flag = False
+		conn.close()
 			
