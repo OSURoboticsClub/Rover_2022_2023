@@ -123,11 +123,11 @@ class RoverVideoReceiver(QtCore.QThread):
 
         # Attach subscribers now that everything is set up
         #rospy.Subscriber(self.topic_base_path + "/image_1280x720/compressed", CompressedImage, self.__image_data_received_callback)
-        self.video_subscribers.append(rclpy.create_subscription(CompressedImage, self.topic_base_path + "/image_1280x720/compressed", self.__image_data_received_callback, 1))
+        self.video_subscribers.append(self.video_receiver_node.create_subscription(CompressedImage, self.topic_base_path + "/image_1280x720/compressed", self.__image_data_received_callback, 1))
         #rospy.Subscriber(self.topic_base_path + "/image_640x360/compressed", CompressedImage, self.__image_data_received_callback)
-        self.video_subscribers.append(rclpy.create_subscription(CompressedImage, self.topic_base_path + "/image_640x360/compressed", self.__image_data_received_callback, 1))
+        self.video_subscribers.append(self.video_receiver_node.create_subscription(CompressedImage, self.topic_base_path + "/image_640x360/compressed", self.__image_data_received_callback, 1))
         #rospy.Subscriber(self.topic_base_path + "/image_256x144/compressed", CompressedImage, self.__image_data_received_callback)
-        self.video_subscribers.append(rclpy.create_subscription(CompressedImage, self.topic_base_path + "/image_256x144/compressed", self.__image_data_received_callback, 1))
+        self.video_subscribers.append(self.video_receiver_node.create_subscription(CompressedImage, self.topic_base_path + "/image_256x144/compressed", self.__image_data_received_callback, 1))
 
     def run(self):
         self.logger.debug("Starting \"%s\" Camera Thread" % self.camera_title_name)
