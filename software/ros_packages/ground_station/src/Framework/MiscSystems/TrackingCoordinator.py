@@ -4,7 +4,7 @@ import logging
 from time import time
 from time import sleep
 from functools import partial
-from multiprocessing.connection import Listener
+import Framework.MiscSystems.TrackingCallback as TrackingCB
 
 #Dearborn Hall coordinates: 44.56688122224506, -123.27560553741544
 #Near Merryfield coordinates: 44.566890589052235, -123.27462028171236
@@ -14,13 +14,6 @@ left =  "left_screen"
 
 #create threaded class to avoid blocking UI updates
 class TrackingCore(QtCore.QThread):
-	#create signals
-	rover_lat_update_ready__signal = QtCore.pyqtSignal(float)
-	rover_lon_update_ready__signal = QtCore.pyqtSignal(float)
-	base_lat_update_ready__signal = QtCore.pyqtSignal(float)
-	base_lon_update_ready__signal = QtCore.pyqtSignal(float)
-	bearing_update_ready__signal = QtCore.pyqtSignal(float)
-
 	def __init__(self,shared_objects):
 		super(TrackingCore,self).__init__()
 		
@@ -47,12 +40,6 @@ class TrackingCore(QtCore.QThread):
 		# ########## Class Variables ##########
 		self.wait_time = 1.0 / THREAD_HERTZ
 		
-		self.current_rover_lat = -1
-		self.current_rover_lon = -1
-		self.current_base_lat = -1
-		self.current_base_lon = -1
-		self.current_bearing = -1
-		
 		#only enable PB for manual angle on valid input in text box, default state is disabled
 		self.manual_angle_pb.setEnabled(False)
 		
@@ -61,47 +48,11 @@ class TrackingCore(QtCore.QThread):
 		self.serial.setBaudRate(9600) #set baud to 9600
 		self.serial.setDataBits(8) # data bits to 8
 		self.serial.setStopBits(1) # 1 stop bit to match UART specs
-		
-		
-	def run(self):
-		self.logger.debug("Starting Tracking Thread")
-		
-		addr = ('localhost', 5000)
-		ui_listener = Listener(addr)
-		conn = ui_listener.accept() #accept conn from tracking algo
-		
-		msg = ""
-		while self.run_thread_flag:
-			start_time = time()
-			if conn.poll():
-				msg = conn.recv()
-				print(f"got message: {msg}")
-				if(msg == "ERROR"):
-					print("Tracking algorithm encountered an error")
-					continue
-				else:
-					self.tracking_updates_callback(msg)
-		
-		
-		time_diff = time() - start_time
-		self.msleep(max(int(self.wait_time - time_diff), 0))
-		self.logger.debug("Stopping Tracking Thread")
 
-            
-	def tracking_updates_callback(self, str):
-		updates = str.split(',')
-		self.current_base_lat = float(updates[0])
-		self.current_base_lon = float(updates[1])
-		self.current_rover_lat = float(updates[2])
-		self.current_rover_lon = float(updates[3])
-		self.current_bearing = float(updates[4])
-		
-		self.base_lat_update_ready__signal.emit(self.current_base_lat)
-		self.base_lon_update_ready__signal.emit(self.current_base_lon)
-		self.rover_lat_update_ready__signal.emit(self.current_rover_lat)
-		self.rover_lon_update_ready__signal.emit(self.current_rover_lon)
-		self.bearing_update_ready__signal.emit(self.current_bearing)
-		
+		#create tracking thread
+		self.trackingThread = TrackingCB.TrackingCallback()
+		self.trackingThread.start()
+
 	def updateRLat(self, value):
 		self.rover_lat.setNum(value)
     	
@@ -130,13 +81,13 @@ class TrackingCore(QtCore.QThread):
 		self.serial.write(angle.encode())
 		
 	def connect_signals_and_slots(self):
-		self.rover_lat_update_ready__signal.connect(self.updateRLat)
-		self.rover_lon_update_ready__signal.connect(self.updateRLon)
-		self.base_lat_update_ready__signal.connect(self.updateBLat)
-		self.base_lon_update_ready__signal.connect(self.updateBLon)
-		self.bearing_update_ready__signal.connect(self.updateBearing)
 		self.manual_angle_pb.clicked.connect(self.send_angle)
 		
+		self.trackingThread.rover_lat_update_ready__signal.connect(self.updateRLat)
+		self.trackingThread.rover_lon_update_ready__signal.connect(self.updateRLon)
+		self.trackingThread.base_lat_update_ready__signal.connect(self.updateBLat)
+		self.trackingThread.base_lon_update_ready__signal.connect(self.updateBLon)
+		self.trackingThread.bearing_update_ready__signal.connect(self.updateBearing)
 		#set validator for angle text
 		validator = QtGui.QDoubleValidator(0.00, 360.00, 2)
 		self.manual_angle_text.editingFinished.connect(partial(self.verify_angle, validator))
@@ -144,9 +95,10 @@ class TrackingCore(QtCore.QThread):
 	def setup_signals(self, start_signal, signals_and_slots_signal, kill_signal):
 		start_signal.connect(self.start)
 		signals_and_slots_signal.connect(self.connect_signals_and_slots)
-		kill_signal.connect(self.on_kill_threads_requested__slot)		
+		kill_signal.connect(self.on_kill_threads_requested__slot)
+
+		self.trackingThread.setup_signals(start_signal, signals_and_slots_signal, kill_signal)		
 		
 	def on_kill_threads_requested__slot(self):
 		self.run_thread_flag = False
-		conn.close()
 			
