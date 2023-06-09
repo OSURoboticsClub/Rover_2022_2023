@@ -19,12 +19,21 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rover2_camera_interface REQUIRED)
+find_package(cv_bridge REQUIRED)
+find_package(image_transport REQUIRED)
+find_package(OpenCV)
+find_package(sensor_msgs)
 
 add_executable(rover_camera src/rover_camera.cpp)
-ament_target_dependencies(rover_camera rclcpp rover2_camera_interface)
+ament_target_dependencies(rover_camera rclcpp rover2_camera_interface cv_bridge image_transport OpenCV sensor_msgs)
 
 install(TARGETS
   rover_camera
   DESTINATION lib/${PROJECT_NAME})
+
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
+)
 
 ament_package()
