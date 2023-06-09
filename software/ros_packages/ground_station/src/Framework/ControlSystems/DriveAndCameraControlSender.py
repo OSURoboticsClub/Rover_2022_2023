@@ -257,7 +257,7 @@ class DriveAndCameraControlSender(QtCore.QThread):
         self.set_right_drive_output__signal.emit(right_output * 100)
 
         self.drive_command_publisher.publish(drive_message)
-        print(drive_message)
+        #print(drive_message)
 
     def publish_camera_control_commands(self):
         trigger_pressed = self.joystick.controller_states["y"]
