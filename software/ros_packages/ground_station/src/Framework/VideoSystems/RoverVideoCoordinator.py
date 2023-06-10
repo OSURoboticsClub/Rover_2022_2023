@@ -220,8 +220,11 @@ class RoverVideoCoordinator(QtCore.QThread):
             main_topic = topics_group[0]
             if "heartbeat" in main_topic:
                 continue
-            camera_name = main_topic.split("/")[2]
-            names.append(camera_name)
+            split_topic = main_topic.split("/")
+            if len(split_topic) >= 3:
+                camera_name = main_topic.split("/")[2]
+                if camera_name != "camera_control":
+                    names.append(camera_name)
 
         names = set(names)
 
