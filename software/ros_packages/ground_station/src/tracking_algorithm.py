@@ -99,7 +99,7 @@ class TrackingAlgorithm:
 								self.base_fix = True
 				while self.base_fix is True:
 						self.r_lat, self.r_lon = self.rover_read(port)
-						#self.r_lat = round(self.r_lat, 3)+
+						#self.r_lat = round(self.r_lat, 3)
 						#self.r_lon = round(self.r_lon, 3)
 						print("rover lat: %.6f, rover long %.6f \n" % (self.r_lat, self.r_lon))
 

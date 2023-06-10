@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 import sys
 import random
-import time
+from time import time
 from time import sleep
 import logging
 from multiprocessing.connection import Listener
@@ -56,6 +56,7 @@ class TrackingCallback(QtCore.QThread):
                     print("Tracking algorithm encountered an error")
                     continue
                 else:
+                    print(msg)
                     self.tracking_updates_callback(msg)
 
 

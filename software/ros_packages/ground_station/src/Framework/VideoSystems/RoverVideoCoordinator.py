@@ -10,13 +10,13 @@ import rclpy
 from rclpy.node import Node
 
 # Custom Imports
-#import RoverVideoReceiver
+import Framework.VideoSystems.RoverVideoReceiver as RoverVideoReceiver
 from rover2_camera_interface.msg import CameraControlMessage
 
 #####################################
 # Global Variables
 #####################################
-CAMERA_TOPIC_PATH = "/cameras/"
+CAMERA_TOPIC_PATH = "/cameras"
 EXCLUDED_CAMERAS = ["zed"]
 
 PRIMARY_LABEL_MAX = (640, 360)
@@ -164,6 +164,7 @@ class RoverVideoCoordinator(QtCore.QThread):
                 for camera in self.camera_threads:
                     self.camera_threads[camera].set_hard_max_resolution(LOW_RES)
             else:
+                print(self.primary_label_current_setting)
                 self.camera_threads[self.valid_cameras[self.primary_label_current_setting]].set_hard_max_resolution(PRIMARY_LABEL_MAX)
 
                 if self.secondary_label_current_setting != self.primary_label_current_setting:
@@ -208,17 +209,22 @@ class RoverVideoCoordinator(QtCore.QThread):
         self.last_gui_selection_changed_time = time()
 
     def __get_cameras(self):
-        #topics = rospy.get_published_topics(CAMERA_TOPIC_PATH)
-        #replace this with get_publishers_info_by_topic + pass in camera topic
+        topics = self.video_coordinator.get_topic_names_and_types()
+        print(topics)
         
         names = []
 
+        #todo: check if len of split is >= 3
+        #check that first index is cameras
         for topics_group in topics:
             main_topic = topics_group[0]
             if "heartbeat" in main_topic:
                 continue
-            camera_name = main_topic.split("/")[2]
-            names.append(camera_name)
+            split_topic = main_topic.split("/")
+            if len(split_topic) >= 3:
+                camera_name = main_topic.split("/")[2]
+                if camera_name != "camera_control":
+                    names.append(camera_name)
 
         names = set(names)
 
@@ -247,6 +253,8 @@ class RoverVideoCoordinator(QtCore.QThread):
     def __setup_video_threads(self):
         for camera in self.valid_cameras:
             self.camera_threads[camera] = RoverVideoReceiver.RoverVideoReceiver(camera)
+
+        print(self.valid_cameras)
 
     def __wait_for_camera_threads(self):
         for camera in self.camera_threads:

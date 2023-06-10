@@ -7,7 +7,8 @@ import logging
 from inputs import devices, GamePad
 from time import time
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from rover_arm.msg import ArmControlMessage
 from rover_control.msg import MiningControlMessage, GripperControlMessage, TowerPanTiltControlMessage
 
@@ -62,6 +63,7 @@ class XBOXController(QtCore.QThread):
 
         # ########## Class Variables ##########
         self.gamepad = None  # type: GamePad
+        self.effectors_node = Node("effectors_node")
 
         self.controller_states = {
             "left_x_axis": 0,
@@ -198,11 +200,16 @@ class EffectorsAndArmControlSender(QtCore.QThread):
 
         self.wait_time = 1.0 / DRIVE_COMMAND_HERTZ
 
-        self.gripper_control_publisher = rospy.Publisher(GRIPPER_CONTROL_TOPIC, GripperControlMessage, queue_size=1)
+        #self.gripper_control_publisher = rospy.Publisher(GRIPPER_CONTROL_TOPIC, GripperControlMessage, queue_size=1)
+        self.gripper_control_publisher = self.effectors_node.create_publisher(GripperControlMessage, GRIPPER_CONTROL_TOPIC, 1)
 
-        self.relative_arm_control_publisher = rospy.Publisher(RELATIVE_ARM_CONTROL_TOPIC, ArmControlMessage, queue_size=1)
-        self.tower_pan_tilt_command_publisher = rospy.Publisher(DEFAULT_TOWER_PAN_TILT_COMMAND_TOPIC, TowerPanTiltControlMessage, queue_size=1)
-        self.mining_control_publisher = rospy.Publisher(MINING_CONTROL_TOPIC, MiningControlMessage, queue_size=1)
+        #self.relative_arm_control_publisher = rospy.Publisher(RELATIVE_ARM_CONTROL_TOPIC, ArmControlMessage, queue_size=1)
+        #self.tower_pan_tilt_command_publisher = rospy.Publisher(DEFAULT_TOWER_PAN_TILT_COMMAND_TOPIC, TowerPanTiltControlMessage, queue_size=1)
+        #self.mining_control_publisher = rospy.Publisher(MINING_CONTROL_TOPIC, MiningControlMessage, queue_size=1)
+        self.relative_arm_control_publisher = self.effectors_node.create_publisher(ArmControlMessage, RELATIVE_ARM_CONTROL_TOPIC, 1)
+        self.tower_pan_tilt_command_publisher = self.effectors_node.create_publisher(TowerPanTiltControlMessage, DEFAULT_TOWER_PAN_TILT_COMMAND_TOPIC, 1)
+        self.mining_control_publisher = self.effectors_node.create_publisher(MiningControlMessage, MINING_CONTROL_TOPIC, 1)
+        
         self.xbox_current_control_state = self.XBOX_CONTROL_STATES.index("ARM")
         self.xbox_control_state_just_changed = False
 
@@ -232,6 +239,7 @@ class EffectorsAndArmControlSender(QtCore.QThread):
             time_diff = time() - start_time
 
             self.msleep(max(int(self.wait_time - time_diff), 0))
+            rclpy.spin_once(self.effectors_node, executor = None, timeout_sec = self.wait_time)
 
         self.logger.debug("Stopping Joystick Thread")
 

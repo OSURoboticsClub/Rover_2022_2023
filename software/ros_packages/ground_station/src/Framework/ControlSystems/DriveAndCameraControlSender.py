@@ -161,8 +161,8 @@ class DriveAndCameraControlSender(QtCore.QThread):
 
         # ########## Reference to class init variables ##########
         self.shared_objects = shared_objects
-        #self.video_coordinator = self.shared_objects["threaded_classes"]["Video Coordinator"]
-        self.right_screen = self.shared_objects["screens"]["right_screen"]
+        self.video_coordinator = self.shared_objects["threaded_classes"]["Video Coordinator"]
+        self.right_screen = self.shared_objects["screens"]["onescreen"]#["right_screen"]
         self.rover_speed_limit_slider = self.right_screen.rover_speed_limit_slider  # type: QtWidgets.QSlider
         self.left_drive_progress_bar = self.right_screen.left_drive_progress_bar  # type: QtWidgets.QProgressBar
         self.right_drive_progress_bar = self.right_screen.right_drive_progress_bar  # type: QtWidgets.QProgressBar
@@ -226,7 +226,7 @@ class DriveAndCameraControlSender(QtCore.QThread):
         self.set_left_drive_output__signal.connect(self.left_drive_progress_bar.setValue)
         self.set_right_drive_output__signal.connect(self.right_drive_progress_bar.setValue)
 
-        #self.video_coordinator.pan_tilt_selection_changed__signal.connect(self.on_pan_tilt_selection_changed__slot)
+        self.video_coordinator.pan_tilt_selection_changed__signal.connect(self.on_pan_tilt_selection_changed__slot)
         self.rover_speed_limit_slider.valueChanged.connect(self.on_speed_limit_slider_value_changed__slot)
 
     def check_and_set_pause_state(self):
@@ -257,7 +257,7 @@ class DriveAndCameraControlSender(QtCore.QThread):
         self.set_right_drive_output__signal.emit(right_output * 100)
 
         self.drive_command_publisher.publish(drive_message)
-        print(drive_message)
+        #print(drive_message)
 
     def publish_camera_control_commands(self):
         trigger_pressed = self.joystick.controller_states["y"]
