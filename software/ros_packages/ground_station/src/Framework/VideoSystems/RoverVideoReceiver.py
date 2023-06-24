@@ -11,11 +11,12 @@ import qimage2ndarray
 from time import time
 
 import rclpy
+from rclpy.qos import qos_profile_sensor_data
 from rclpy.node import Node
 from rclpy.executors import SingleThreadedExecutor
 #import dynamic_reconfigure.client
 from cv_bridge import CvBridge
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import CompressedImage, Image
 
 # Custom Imports
 from rover2_camera_interface.msg import CameraControlMessage
@@ -69,7 +70,7 @@ class RoverVideoReceiver(QtCore.QThread):
         # ########## Class Variables ##########
         self.camera_title_name = self.camera_name.replace("_", " ").title()
 
-        self.topic_base_path = CAMERA_TOPIC_PATH + self.camera_name
+        self.topic_base_path = CAMERA_TOPIC_PATH + "/" + self.camera_name
         self.control_topic_path = self.topic_base_path + "/camera_control"
         self.wait_time = 1/20
 
@@ -124,11 +125,11 @@ class RoverVideoReceiver(QtCore.QThread):
 
         # Attach subscribers now that everything is set up
         #rospy.Subscriber(self.topic_base_path + "/image_1280x720/compressed", CompressedImage, self.__image_data_received_callback)
-        self.video_subscribers.append(self.video_receiver_node.create_subscription(CompressedImage, self.topic_base_path + "/image_1280x720/compressed", self.__image_data_received_callback, 1))
+        self.video_subscribers.append(self.video_receiver_node.create_subscription(CompressedImage, self.topic_base_path + "/image_1280x720/compressed", self.__image_data_received_callback, qos_profile_sensor_data))
         #rospy.Subscriber(self.topic_base_path + "/image_640x360/compressed", CompressedImage, self.__image_data_received_callback)
-        self.video_subscribers.append(self.video_receiver_node.create_subscription(CompressedImage, self.topic_base_path + "/image_640x360/compressed", self.__image_data_received_callback, 1))
+        self.video_subscribers.append(self.video_receiver_node.create_subscription(CompressedImage, self.topic_base_path + "/image_640x360/compressed", self.__image_data_received_callback, qos_profile_sensor_data))
         #rospy.Subscriber(self.topic_base_path + "/image_256x144/compressed", CompressedImage, self.__image_data_received_callback)
-        self.video_subscribers.append(self.video_receiver_node.create_subscription(CompressedImage, self.topic_base_path + "/image_256x144/compressed", self.__image_data_received_callback, 1))
+        self.video_subscribers.append(self.video_receiver_node.create_subscription(CompressedImage, self.topic_base_path + "/image_256x144/compressed", self.__image_data_received_callback, qos_profile_sensor_data))
 
     def run(self):
         self.logger.debug("Starting \"%s\" Camera Thread" % self.camera_title_name)

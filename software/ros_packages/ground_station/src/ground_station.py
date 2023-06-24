@@ -141,9 +141,9 @@ class GroundStation(QtCore.QObject):
         self.shared_objects["regular_classes"][name] = instance
 
     def __connect_signals_to_slots(self):
-    	self.shared_objects["screens"]["onescreen"].exit_requested_signal.connect(self.on_exit_requested__slot)
-        #self.shared_objects["screens"]["left_screen"].exit_requested_signal.connect(self.on_exit_requested__slot)
-        #self.shared_objects["screens"]["right_screen"].exit_requested_signal.connect(self.on_exit_requested__slot)
+        #self.shared_objects["screens"]["onescreen"].exit_requested_signal.connect(self.on_exit_requested__slot)
+        self.shared_objects["screens"]["left_screen"].exit_requested_signal.connect(self.on_exit_requested__slot)
+        self.shared_objects["screens"]["right_screen"].exit_requested_signal.connect(self.on_exit_requested__slot)
 
     def on_exit_requested__slot(self):
         self.kill_threads_signal.emit()
