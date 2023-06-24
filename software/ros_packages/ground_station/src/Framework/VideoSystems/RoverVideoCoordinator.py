@@ -52,7 +52,7 @@ class RoverVideoCoordinator(QtCore.QThread):
 
         # ########## Reference to class init variables ##########
         self.shared_objects = shared_objects
-        self.right_screen = self.shared_objects["screens"]["right_screen"]
+        self.right_screen = self.shared_objects["screens"]["onescreen"]#["right_screen"]
         self.primary_video_display_label = self.right_screen.primary_video_label  # type:QtWidgets.QLabel
         self.secondary_video_display_label = self.right_screen.secondary_video_label  # type:QtWidgets.QLabel
         self.tertiary_video_display_label = self.right_screen.tertiary_video_label  # type:QtWidgets.QLabel
@@ -91,12 +91,12 @@ class RoverVideoCoordinator(QtCore.QThread):
         # Reset default cameras
         self.chassis_publisher = self.video_coordinator.create_publisher(CameraControlMessage, "/cameras/chassis/camera_control", 1)
         self.chassis_publisher.publish(reset_camera_message)
-        self.under_publisher = self.video_coordinator.create_publisher(CameraControlMessage, "/cameras/undercarriage/camera_control", 1)
-        self.under_publisher.publish(reset_camera_message)
+        #self.under_publisher = self.video_coordinator.create_publisher(CameraControlMessage, "/cameras/undercarriage/camera_control", 1)
+        #self.under_publisher.publish(reset_camera_message)
         self.nav_publisher = self.video_coordinator.create_publisher(CameraControlMessage, "/cameras/main_navigation/camera_control", 1)
         self.nav_publisher.publish(reset_camera_message)
-        self.effector_publisher = self.video_coordinator.create_publisher(CameraControlMessage, "/cameras/end_effector/camera_control", 1)
-        self.effector_publisher.publish(reset_camera_message)
+        #self.effector_publisher = self.video_coordinator.create_publisher(CameraControlMessage, "/cameras/end_effector/camera_control", 1)
+        #self.effector_publisher.publish(reset_camera_message)
 
         self.msleep(3000)
 
@@ -210,11 +210,10 @@ class RoverVideoCoordinator(QtCore.QThread):
 
     def __get_cameras(self):
         topics = self.video_coordinator.get_topic_names_and_types()
-        print(topics)
+        #print(topics)
         
         names = []
 
-        #todo: check if len of split is >= 3
         #check that first index is cameras
         for topics_group in topics:
             main_topic = topics_group[0]
@@ -250,7 +249,10 @@ class RoverVideoCoordinator(QtCore.QThread):
         if "end_effector" in names:
             self.valid_cameras.append("end_effector")
 
+        self.valid_cameras.append("chassis")
+
     def __setup_video_threads(self):
+        #print(self.valid_cameras)
         for camera in self.valid_cameras:
             self.camera_threads[camera] = RoverVideoReceiver.RoverVideoReceiver(camera)
 
