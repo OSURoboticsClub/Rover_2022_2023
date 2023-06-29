@@ -117,6 +117,9 @@ class SensorCore(QtCore.QThread):
         self.battery = self.screen_main_window.battery_voltage_status_label  # type: QtWidgets.QLabel
         self.co2_levels_label = self.screen_main_window.co2_levels_label  # type: QtWidgets.QLabel
 
+        #create node
+        self.status_core_node = Node("status_core_node")
+
         # ########## subscriptions pulling data from system_statuses_node.py ##########
         # ########## system_statuses_node.py found under ros_packages/rover_status/src
         #self.camera_status = rospy.Subscriber(CAMERA_TOPIC_NAME, CameraStatuses, self.__camera_callback)
@@ -126,13 +129,14 @@ class SensorCore(QtCore.QThread):
         #self.misc_status = rospy.Subscriber(MISC_TOPIC_NAME, MiscStatuses, self.__misc_callback)
         #self.battery_status = rospy.Subscriber(BATTERY_TOPIC_NAME, BatteryStatusMessage, self.__battery_callback)
         #self.co2_status = rospy.Subscriber(CO2_TOPIC_NAME, UInt16, self.__co2_callback)
+
         self.camera_status = self.status_core_node.create_subscription(CameraStatuses, CAMERA_TOPIC_NAME, self.__camera_callback, 1)
         self.frsky_status = self.status_core_node.create_subscription(FrSkyStatus, FRSKY_TOPIC_NAME, self.__frsky_callback, 1)
         self.gps_status = self.status_core_node.create_subscription(GPSInfo, GPS_TOPIC_NAME, self.__gps_callback, 1)
         self.jetson_status = self.status_core_node.create_subscription(JetsonInfo, JETSON_TOPIC_NAME, self.__jetson_callback, 1)
         self.misc_status = self.status_core_node.create_subscription(MiscStatuses, MISC_TOPIC_NAME, self.__misc_callback, 1)
         self.battery_status = self.status_core_node.create_subscription(BatteryStatusMessage, BATTERY_TOPIC_NAME, self.__battery_callback, 1)
-        self.co2_status = self.status_core_node.create_subscription(UInt16, CO2_TOPIC_NAME, self.__co2_callback, 1)
+        #self.co2_status = self.status_core_node.create_subscription(UInt16, CO2_TOPIC_NAME, self.__co2_callback, 1)
 
 
         self.camera_msg = CameraStatuses()
