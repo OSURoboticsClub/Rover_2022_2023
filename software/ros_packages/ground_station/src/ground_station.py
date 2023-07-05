@@ -21,14 +21,14 @@ import Framework.LoggingSystems.Logger as Logger
 #import Framework.NavigationSystems.SpeedAndHeadingIndication as SpeedAndHeading
 #import Framework.NavigationSystems.WaypointsCoordinator as WaypointsCoordinator
 #import Framework.ArmSystems.ArmIndication as ArmIndication
-import Framework.StatusSystems.StatusCore as StatusCore
-import Framework.StatusSystems.UbiquitiStatusCore as UbiquitiStatusCore
-import Framework.SettingsSystems.UbiquitiRadioSettings as UbiquitiRadioSettings
+#import Framework.StatusSystems.StatusCore as StatusCore
+#import Framework.StatusSystems.UbiquitiStatusCore as UbiquitiStatusCore
+#import Framework.SettingsSystems.UbiquitiRadioSettings as UbiquitiRadioSettings
 #import Framework.MiscSystems.MiningCore as MiningCore
-import Framework.MiscSystems.BashConsoleCore as BashConsoleCore
+#import Framework.MiscSystems.BashConsoleCore as BashConsoleCore
 #import Framework.MiscSystems.MiscArmCore as MiscArmCore
 #import Framework.MiscSystems.RDFCore as RDFCore
-#import Framework.MiscSystems.TrackingCoordinator as TrackCoordinator
+import Framework.MiscSystems.TrackingCoordinator as TrackCoordinator
 
 #####################################
 # Global Variables
@@ -96,7 +96,8 @@ class GroundStation(QtCore.QObject):
         }
 
         # ###### Instantiate Left And Right Screens ######
-        #self.shared_objects["screens"]["onescreen"] = self.create_application_window(UI_FILE_SINGLE, "Rover Ground Station Left Screen", self.LEFT_SCREEN_ID)
+        self.shared_objects["screens"]["onescreen"] = self.create_application_window(UI_FILE_SINGLE, "Rover Ground Station Left Screen", self.LEFT_SCREEN_ID)
+        """
         self.shared_objects["screens"]["left_screen"] = \
             self.create_application_window(UI_FILE_LEFT, "Rover Ground Station Left Screen",
                                            self.LEFT_SCREEN_ID)  # type: ApplicationWindow
@@ -104,6 +105,7 @@ class GroundStation(QtCore.QObject):
         self.shared_objects["screens"]["right_screen"] = \
             self.create_application_window(UI_FILE_RIGHT, "Rover Ground Station Right Screen",
                                            self.RIGHT_SCREEN_ID)  # type: ApplicationWindow
+        """
        
 
         # ###### Initialize rclpy ######
@@ -119,14 +121,14 @@ class GroundStation(QtCore.QObject):
         #self.__add_thread("Joystick Sender", JoystickControlSender.DriveAndCameraControlSender(self.shared_objects))
         #self.__add_thread("Controller Sender", ControllerControlSender.EffectorsAndArmControlSender(self.shared_objects))
         #self.__add_thread("Speed and Heading", SpeedAndHeading.SpeedAndHeadingIndication(self.shared_objects))
-        self.__add_thread("Rover Status", StatusCore.SensorCore(self.shared_objects))
-        self.__add_thread("Ubiquiti Status", UbiquitiStatusCore.UbiquitiStatus(self.shared_objects))
-        self.__add_thread("Ubiquiti Radio Settings", UbiquitiRadioSettings.UbiquitiRadioSettings(self.shared_objects))
+        #self.__add_thread("Rover Status", StatusCore.SensorCore(self.shared_objects))
+        #self.__add_thread("Ubiquiti Status", UbiquitiStatusCore.UbiquitiStatus(self.shared_objects))
+        #self.__add_thread("Ubiquiti Radio Settings", UbiquitiRadioSettings.UbiquitiRadioSettings(self.shared_objects))
         #self.__add_thread("Waypoints Coordinator", WaypointsCoordinator.WaypointsCoordinator(self.shared_objects))
-        self.__add_thread("Bash Console", BashConsoleCore.BashConsole(self.shared_objects))
+        #self.__add_thread("Bash Console", BashConsoleCore.BashConsole(self.shared_objects))
         #self.__add_thread("Misc Arm", MiscArmCore.MiscArm(self.shared_objects))
         #self.__add_thread("RDF", RDFCore.RDF(self.shared_objects))
-        #self.__add_thread("Tracking", TrackCoordinator.TrackingCore(self.shared_objects))
+        self.__add_thread("Tracking", TrackCoordinator.TrackingCore(self.shared_objects))
 
         self.connect_signals_and_slots_signal.emit()
         self.__connect_signals_to_slots()
@@ -141,9 +143,9 @@ class GroundStation(QtCore.QObject):
         self.shared_objects["regular_classes"][name] = instance
 
     def __connect_signals_to_slots(self):
-        #self.shared_objects["screens"]["onescreen"].exit_requested_signal.connect(self.on_exit_requested__slot)
-        self.shared_objects["screens"]["left_screen"].exit_requested_signal.connect(self.on_exit_requested__slot)
-        self.shared_objects["screens"]["right_screen"].exit_requested_signal.connect(self.on_exit_requested__slot)
+        self.shared_objects["screens"]["onescreen"].exit_requested_signal.connect(self.on_exit_requested__slot)
+        #self.shared_objects["screens"]["left_screen"].exit_requested_signal.connect(self.on_exit_requested__slot)
+        #self.shared_objects["screens"]["right_screen"].exit_requested_signal.connect(self.on_exit_requested__slot)
 
     def on_exit_requested__slot(self):
         self.kill_threads_signal.emit()

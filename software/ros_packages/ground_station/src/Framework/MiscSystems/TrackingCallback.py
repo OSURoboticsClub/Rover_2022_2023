@@ -4,7 +4,7 @@ import random
 from time import time
 from time import sleep
 import logging
-from multiprocessing.connection import Listener
+import socket
 
 THREAD_HERTZ = 5
 
@@ -41,24 +41,37 @@ class TrackingCallback(QtCore.QThread):
 
     def run(self):
         self.logger.debug("Starting Tracking Thread")
-
+        #create listener socket and bind to localhost for IPC (yes I know better ways exist...)
+        ui_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         addr = ('localhost', 5000)
-        ui_listener = Listener(addr)
-        conn = ui_listener.accept() #accept conn from tracking algo
+        ui_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) #make socket reusable
+        ui_sock.bind(addr)
 
+        ui_sock.settimeout(2) #make sure the socket does not block on recv so UI does not freeze
+        #ref: https://stackoverflow.com/questions/16745409/what-does-pythons-socket-recv-return-for-non-blocking-sockets-if-no-data-is-r
+        ui_sock.listen(1)
+        conn, addr = ui_sock.accept()
         msg = ""
-        while self.run_thread_flag:
-            start_time = time()
-            if conn.poll():
-                msg = conn.recv()
-                print(f"got message: {msg}")
-                if(msg == "ERROR"):
-                    print("Tracking algorithm encountered an error")
-                    continue
+        with conn:
+            while self.run_thread_flag:
+                start_time = time()
+                try:
+                    msg = conn.recv()
+                except socket.timeout as e:
+                   print("Timeout on recv, try again later")
+                   continue
+                except socket.error as e:
+                    print("some other error occured")
+                    print(e)
+                    sys.exit(1)
                 else:
-                    print(msg)
-                    self.tracking_updates_callback(msg)
-
+                    print(f"got message: {msg}")
+                    if(msg == "ERROR"):
+                        print("Tracking algorithm encountered an error")
+                        continue
+                    else:
+                        print(msg)
+                        self.tracking_updates_callback(msg)
 
         conn.close()
         time_diff = time() - start_time

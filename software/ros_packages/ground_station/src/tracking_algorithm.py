@@ -10,7 +10,7 @@ import math
 import serial
 import struct
 import time
-from multiprocessing.connection import Client
+import socket
 
 class TrackingAlgorithm:
 
@@ -128,8 +128,10 @@ class TrackingAlgorithm:
 
 
 def main():
-	addr = ('localhost', 5000) #open a socket at addr 5000
-	tracking_client = Client(addr)
+	tracking_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	addr = ('localhost', 5000)
+	tracking_client.connect(addr)
+	print("socket connected to:", addr)
 	algo = TrackingAlgorithm()
 	algo.run_algo(tracking_client) #pass sender into main running function so messages can be sent every cycle
 
