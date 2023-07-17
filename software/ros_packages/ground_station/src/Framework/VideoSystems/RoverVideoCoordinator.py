@@ -33,6 +33,7 @@ STYLESHEET_UNSELECTED = "background-color:black;"
 COLOR_GREEN = "background-color: darkgreen;"
 COLOR_RED = "background-color: darkred;"
 
+SCREEN = "onescreen" #right
 
 #####################################
 # RoverVideoCoordinator Class Definition
@@ -52,7 +53,7 @@ class RoverVideoCoordinator(QtCore.QThread):
 
         # ########## Reference to class init variables ##########
         self.shared_objects = shared_objects
-        self.right_screen = self.shared_objects["screens"]["right_screen"]
+        self.right_screen = self.shared_objects["screens"][SCREEN]
         self.primary_video_display_label = self.right_screen.primary_video_label  # type:QtWidgets.QLabel
         self.secondary_video_display_label = self.right_screen.secondary_video_label  # type:QtWidgets.QLabel
         self.tertiary_video_display_label = self.right_screen.tertiary_video_label  # type:QtWidgets.QLabel

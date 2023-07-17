@@ -9,6 +9,7 @@ from time import time
 
 import rclpy
 from rclpy.node import Node
+from rclpy.executors import SingleThreadedExecutor
 from rover2_control_interface.msg import DriveCommandMessage, TowerPanTiltControlMessage
 
 #####################################
@@ -40,6 +41,8 @@ TOWER_PAN_TILT_Y_AXIS_SCALAR = 15
 
 CHASSIS_PAN_TILT_X_AXIS_SCALAR = 15
 CHASSIS_PAN_TILT_Y_AXIS_SCALAR = 15
+
+SCREEN = "onescreen" #right
 
 
 #####################################
@@ -162,7 +165,7 @@ class DriveAndCameraControlSender(QtCore.QThread):
         # ########## Reference to class init variables ##########
         self.shared_objects = shared_objects
         self.video_coordinator = self.shared_objects["threaded_classes"]["Video Coordinator"]
-        self.right_screen = self.shared_objects["screens"]["onescreen"]#["right_screen"]
+        self.right_screen = self.shared_objects["screens"][SCREEN]
         self.rover_speed_limit_slider = self.right_screen.rover_speed_limit_slider  # type: QtWidgets.QSlider
         self.left_drive_progress_bar = self.right_screen.left_drive_progress_bar  # type: QtWidgets.QProgressBar
         self.right_drive_progress_bar = self.right_screen.right_drive_progress_bar  # type: QtWidgets.QProgressBar
@@ -207,6 +210,9 @@ class DriveAndCameraControlSender(QtCore.QThread):
     def run(self):
         self.logger.debug("Starting Joystick Thread")
 
+        joystick_executor = SingleThreadedExecutor() #create single threaded exec object
+        joystick_executor.add_node(self.joystick_node)
+
         while self.run_thread_flag:
             start_time = time()
 
@@ -214,8 +220,7 @@ class DriveAndCameraControlSender(QtCore.QThread):
             self.__update_and_publish()
             
             
-            rclpy.spin_once(self.joystick_node, executor = None, timeout_sec = self.wait_time)
-
+            joystick_executor.spin_once(timeout_sec = self.wait_time)
             time_diff = time() - start_time
 
             self.msleep(max(int(self.wait_time - time_diff), 0))

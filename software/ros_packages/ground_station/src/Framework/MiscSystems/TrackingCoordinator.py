@@ -10,7 +10,7 @@ import Framework.MiscSystems.TrackingCallback as TrackingCB
 #Near Merryfield coordinates: 44.566890589052235, -123.27462028171236
 
 THREAD_HERTZ = 5
-left =  "onescreen"
+left =  "left_screen"
 
 #create threaded class to avoid blocking UI updates
 class TrackingCore(QtCore.QThread):

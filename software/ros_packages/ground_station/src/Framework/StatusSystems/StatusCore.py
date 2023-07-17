@@ -38,6 +38,8 @@ GPS_BEST_CASE_ACCURACY = 3
 LOW_BATTERY_DIALOG_TIMEOUT = 120
 CRITICAL_BATTERY_DIALOG_TIMEOUT = 30
 
+SCREEN = "onescreen" #left
+
 
 class SensorCore(QtCore.QThread):
     # ########## create signals for slots ##########
@@ -89,7 +91,7 @@ class SensorCore(QtCore.QThread):
 
         # ########## Reference to class init variables ##########
         self.shared_objects = shared_objects
-        self.screen_main_window = self.shared_objects["screens"]["left_screen"]
+        self.screen_main_window = self.shared_objects["screens"][SCREEN]
 
         # self.cpu_read = self.screen_main_window.lineEdit  # type: QtWidgets.QLabel
         # self.ram_read = self.screen_main_window.lineEdit_2  # type: QtWidgets.QLabel
