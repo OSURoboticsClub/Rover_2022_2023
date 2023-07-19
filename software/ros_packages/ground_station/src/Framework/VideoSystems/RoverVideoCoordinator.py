@@ -153,7 +153,7 @@ class RoverVideoCoordinator(QtCore.QThread):
             setting = self.tertiary_label_current_setting
 
         if setting == self.main_nav_index:
-            self.pan_tilt_selection_changed__signal.emit("tower_pan_tilt")
+            self.pan_tilt_selection_changed__signal.emit("chassis_pan_tilt") #temp change while cameras aren't all connected
         elif setting == self.chassis_index:
             self.pan_tilt_selection_changed__signal.emit("chassis_pan_tilt")
         else:
