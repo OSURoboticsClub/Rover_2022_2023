@@ -111,7 +111,7 @@ class TrackingAlgorithm:
 								time.sleep(1)
 								usb.write(bytes.encode())
 								self.sender_string = str(self.b_lat) + ", " + str(self.b_lon) + ", " + str(self.r_lat) + ", " + str(self.r_lon) + ", " + str(self.bearing)
-								client.send(self.sender_string)
+								client.send(self.sender_string.encode())
 						else:
 								print("Cannot produce bearing angle, make sure GPS modules are getting a fix")
 								client.send("ERROR")

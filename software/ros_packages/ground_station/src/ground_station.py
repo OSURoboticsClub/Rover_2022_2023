@@ -28,7 +28,7 @@ import Framework.SettingsSystems.UbiquitiRadioSettings as UbiquitiRadioSettings
 #import Framework.MiscSystems.BashConsoleCore as BashConsoleCore
 #import Framework.MiscSystems.MiscArmCore as MiscArmCore
 #import Framework.MiscSystems.RDFCore as RDFCore
-#import Framework.MiscSystems.TrackingCoordinator as TrackCoordinator
+import Framework.MiscSystems.TrackingCoordinator as TrackCoordinator
 
 #####################################
 # Global Variables
@@ -128,7 +128,7 @@ class GroundStation(QtCore.QObject):
         #self.__add_thread("Bash Console", BashConsoleCore.BashConsole(self.shared_objects))
         #self.__add_thread("Misc Arm", MiscArmCore.MiscArm(self.shared_objects))
         #self.__add_thread("RDF", RDFCore.RDF(self.shared_objects))
-        #self.__add_thread("Tracking", TrackCoordinator.TrackingCore(self.shared_objects))
+        self.__add_thread("Tracking", TrackCoordinator.TrackingCore(self.shared_objects))
 
         self.connect_signals_and_slots_signal.emit()
         self.__connect_signals_to_slots()

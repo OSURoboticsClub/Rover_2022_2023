@@ -47,7 +47,7 @@ class TrackingCallback(QtCore.QThread):
         ui_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) #make socket reusable
         ui_sock.bind(addr)
 
-        ui_sock.settimeout(2) #make sure the socket does not block on recv so UI does not freeze
+        ui_sock.settimeout(15) #make sure the socket does not block on recv so UI does not freeze
         #ref: https://stackoverflow.com/questions/16745409/what-does-pythons-socket-recv-return-for-non-blocking-sockets-if-no-data-is-r
         ui_sock.listen(1)
         conn, addr = ui_sock.accept()
@@ -56,7 +56,7 @@ class TrackingCallback(QtCore.QThread):
             while self.run_thread_flag:
                 start_time = time()
                 try:
-                    msg = conn.recv()
+                    msg = conn.recv(4096)
                 except socket.timeout as e:
                    print("Timeout on recv, try again later")
                    continue
@@ -65,12 +65,12 @@ class TrackingCallback(QtCore.QThread):
                     print(e)
                     sys.exit(1)
                 else:
-                    print(f"got message: {msg}")
+                    #print(f"got message: {msg}")
                     if(msg == "ERROR"):
                         print("Tracking algorithm encountered an error")
                         continue
                     else:
-                        print(msg)
+                        msg.decode()
                         self.tracking_updates_callback(msg)
 
         conn.close()
@@ -80,7 +80,7 @@ class TrackingCallback(QtCore.QThread):
 
 
     def tracking_updates_callback(self, str):
-        updates = str.split(',')
+        updates = str.split(b',')
         self.current_base_lat = float(updates[0])
         self.current_base_lon = float(updates[1])
         self.current_rover_lat = float(updates[2])

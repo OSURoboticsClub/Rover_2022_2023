@@ -1488,7 +1488,7 @@ N/A</string>
             <item row="3" column="0">
              <layout class="QGridLayout" name="gridLayout_25">
               <item row="0" column="2">
-               <widget class="QLabel" name="bearing_angle_2">
+               <widget class="QLabel" name="bearing_angle">
                 <property name="font">
                  <font>
                   <pointsize>12</pointsize>

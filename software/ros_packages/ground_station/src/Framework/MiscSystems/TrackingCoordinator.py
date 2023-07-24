@@ -10,7 +10,7 @@ import Framework.MiscSystems.TrackingCallback as TrackingCB
 #Near Merryfield coordinates: 44.566890589052235, -123.27462028171236
 
 THREAD_HERTZ = 5
-left =  "left_screen"
+left =  "onescreen"
 
 #create threaded class to avoid blocking UI updates
 class TrackingCore(QtCore.QThread):
@@ -27,6 +27,7 @@ class TrackingCore(QtCore.QThread):
 		self.base_lon = self.left_screen.base_lon #type: QtWidget.QLabel
 		self.manual_angle_text = self.left_screen.manual_angle_text #type: QtWidgets.QLineEdit
 		self.manual_angle_pb = self.left_screen.manual_angle_pb #type: QtWidgets.QPushButton
+		self.bearing_angle = self.left_screen.bearing_angle #type: QtWidgets.QLabel
 		
 		# ########## Get the settings instance ##########
 		self.settings = QtCore.QSettings()
