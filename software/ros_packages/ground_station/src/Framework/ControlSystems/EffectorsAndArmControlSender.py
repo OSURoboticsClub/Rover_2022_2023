@@ -9,13 +9,14 @@ from time import time
 
 import rclpy
 from rclpy.node import Node
+from rclpy.executors import SingleThreadedExecutor
 from rover_arm.msg import ArmControlMessage
 from rover_control.msg import MiningControlMessage, GripperControlMessage, TowerPanTiltControlMessage
 
 #####################################
 # Global Variables
 #####################################
-GAME_CONTROLLER_NAME = "Afterglow Gamepad for Xbox 360"
+GAME_CONTROLLER_NAME = "PowerA Xbox One Wired Controller"
 
 DRIVE_COMMAND_HERTZ = 20
 
@@ -178,8 +179,8 @@ class EffectorsAndArmControlSender(QtCore.QThread):
 
         # ########## Reference to class init variables ##########
         self.shared_objects = shared_objects
-        self.left_screen = self.shared_objects["screens"]["left_screen"]
-        self.right_screen = self.shared_objects["screens"]["right_screen"]
+        self.left_screen = self.shared_objects["screens"]["onescreen"] 
+        self.right_screen = self.shared_objects["screens"]["onescreen"]
         self.xbox_mode_arm_label = self.right_screen.xbox_mode_arm_label  # type: QtWidgets.QLabel
         self.xbox_mode_mining_label = self.right_screen.xbox_mode_mining_label  # type: QtWidgets.QLabel
 
@@ -221,7 +222,10 @@ class EffectorsAndArmControlSender(QtCore.QThread):
         self.last_y_button_state = 0
 
     def run(self):
-        self.logger.debug("Starting Joystick Thread")
+        self.logger.debug("Starting Effectors Thread")
+
+        effectors_executor = SingleThreadedExecutor()
+        effectors_executor.add_node(self.effectors_node)
 
         while self.run_thread_flag:
             start_time = time()
@@ -236,10 +240,12 @@ class EffectorsAndArmControlSender(QtCore.QThread):
                 self.send_mining_commands()
 
             self.send_hitch_commands()
+
+            effectors_executor.spin_once(timeout_sec = self.wait_time)
             time_diff = time() - start_time
 
             self.msleep(max(int(self.wait_time - time_diff), 0))
-            rclpy.spin_once(self.effectors_node, executor = None, timeout_sec = self.wait_time)
+            
 
         self.logger.debug("Stopping Joystick Thread")
 
