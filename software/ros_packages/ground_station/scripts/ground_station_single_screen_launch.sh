@@ -22,4 +22,4 @@ Xephyr +xinerama -screen 1920x1080 -screen 1920x1080 -ac :1 &
 # change the display variable to allow connecting to Xephyr
 export DISPLAY=:1
 
-python ground_station.py
+python3 ground_station.py
