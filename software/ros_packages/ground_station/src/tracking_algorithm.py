@@ -1,10 +1,11 @@
 """
 Tracking algorithm code for the 2022-2023 Mars Rover RDF Capstone Project
 Author: K. Kopcho
-Date Revised: 03/11/2023
+Date Revised: Jul 31st, 2023
 
 """
 
+from geographiclib.geodesic import Geodesic
 import gps
 import math
 import serial
@@ -27,22 +28,38 @@ class TrackingAlgorithm:
 	rover_fix_mode = ""
     
 #the following function is based on the equations found here: https://www.movable-type.co.uk/scripts/latlong.html
+#also from this stack exchange thread https://gis.stackexchange.com/questions/29239/calculate-bearing-between-two-decimal-gps-coordinates/29240#29240
+#and this example here https://web.archive.org/web/20171219235009/http://mathforum.org/library/drmath/view/55417.html
 	def forward_bearing(self, base_lat, base_long, rover_lat, rover_long): 
-		diff_long = (base_long - rover_long)
-
 		#convert to radians before doing calculations
 		base_lat = math.radians(base_lat)
 		base_long = math.radians(base_long)
 		rover_lat = math.radians(rover_lat)
 		rover_long = math.radians(rover_long)
-		diff_long = math.radians(diff_long)
+		diff_long = rover_long - base_long
+		#initial azimuth over great circle (higher accuracy?)
+		
+		dphi = math.log(math.tan(rover_lat/2.0+math.pi/4.0)/math.tan(base_lat/2.0+math.pi/4.0))
+		if(abs(diff_long) > math.pi):
+			if diff_long > 0.0:
+				diff_long = -(2.0 * math.pi - diff_long)
+			else:
+				diff_long = (2.0 * math.pi + diff_long)
+		theta1 = math.atan2(diff_long, dphi)
+		bearing1 = (math.degrees(theta1) + 360) % 360
+		print("Great circle bearing:", bearing1)
 
-        #do the actual math now, again this is based on the equations on the moveable-type site
-		y = math.sin(diff_long) * math.cos(base_lat)
-		x = math.cos(rover_lat) * math.sin(base_lat) - math.sin(rover_lat) * math.cos(base_lat) * math.cos(diff_long)
-		theta = math.atan2(y, x)
-		fbearing = (theta * 180/math.pi + 360) % 360 #converts rads back to degrees from 0 to 360
+		#initial bearing using rhumb lines (the moveable type formula)
+		y = math.sin(diff_long) * math.cos(rover_lat)
+		x = math.cos(base_lat) * math.sin(rover_lat) - math.sin(base_lat) * math.cos(rover_lat) * math.cos(diff_long)
+		theta2 = math.atan2(y,x)
+		bearing2 = (math.degrees(theta1) + 360) % 360 #converts rads back to degrees from 0 to 360
+		print("Rhumb line bearing:", bearing2)
+
+		#using geodesic library for a sanity check...
+		fbearing = Geodesic.WGS84.Inverse(base_lat, base_long, rover_lat, rover_long)['azi1']
 		fbearing = round(fbearing, 1)
+		print(fbearing)
 
 		return fbearing
 
@@ -99,7 +116,8 @@ class TrackingAlgorithm:
 						if(self.b_lat == -1 and self.b_lon == -1): #if we're not connected or lat/lon isn't finite
 								print(" Lat n/a Lon n/a")
 						else:
-								print("base lat: %.6f, base lon: %.6f \n" % (self.b_lat, self.b_lon))
+								print(self.b_lat)
+								print(self.b_lon)
 								self.base_fix = True
 				while self.base_fix is True:
 						if(session.fix.mode == 0 | session.fix.mode == 1):
@@ -109,9 +127,10 @@ class TrackingAlgorithm:
 							self.base_fix_mode = "Base GPS Fix True"
 
 						self.r_lat, self.r_lon = self.rover_read(port)
-						self.r_lat = round(self.r_lat, 6)
-						self.r_lon = round(self.r_lon, 6)
-						print("rover lat: %.6f, rover long %.6f \n" % (self.r_lat, self.r_lon))
+						#self.r_lat = round(self.r_lat, 6)
+						#self.r_lon = round(self.r_lon, 6)
+						print(self.r_lat)
+						print(self.r_lon)
 
 						if(self.r_lat != -1 and self.r_lon != -1):
 								self.rover_fix_mode = "Rover GPS Fix True"

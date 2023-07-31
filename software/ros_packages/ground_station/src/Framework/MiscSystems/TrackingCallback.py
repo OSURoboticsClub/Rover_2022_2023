@@ -69,7 +69,6 @@ class TrackingCallback(QtCore.QThread):
                     print(e)
                     sys.exit(1)
                 else:
-                    #print(f"got message: {msg}")
                     msg = msg.decode()
                     if(msg[0:5] == "ERROR"):
                         print("Tracking algorithm encountered an error")
@@ -80,6 +79,7 @@ class TrackingCallback(QtCore.QThread):
                         self.rover_fix_update_ready__signal.emit(self.current_rover_status)
                         continue
                     else:
+                        #print(f"got message: {msg}")
                         self.tracking_updates_callback(msg)
 
         conn.close()
@@ -89,22 +89,25 @@ class TrackingCallback(QtCore.QThread):
 
 
     def tracking_updates_callback(self, str):
-        updates = str.split(b',')
-        self.current_base_lat = float(updates[0])
-        self.current_base_lon = float(updates[1])
-        self.current_rover_lat = float(updates[2])
-        self.current_rover_lon = float(updates[3])
-        self.current_bearing = float(updates[4])
-        self.current_rover_status = updates[5].decode()
-        self.current_base_status = updates[6].decode()
+        updates = str.split(",")
+        if(updates[0] == ''):
+            print("Packet lost or other error occured")
+        else:
+            self.current_base_lat = float(updates[0])
+            self.current_base_lon = float(updates[1])
+            self.current_rover_lat = float(updates[2])
+            self.current_rover_lon = float(updates[3])
+            self.current_bearing = float(updates[4])
+            self.current_rover_status = updates[5]
+            self.current_base_status = updates[6]
 
-        self.base_lat_update_ready__signal.emit(self.current_base_lat)
-        self.base_lon_update_ready__signal.emit(self.current_base_lon)
-        self.rover_lat_update_ready__signal.emit(self.current_rover_lat)
-        self.rover_lon_update_ready__signal.emit(self.current_rover_lon)
-        self.bearing_update_ready__signal.emit(self.current_bearing)
-        self.base_fix_update_ready__signal.emit(self.current_base_status)
-        self.rover_fix_update_ready__signal.emit(self.current_rover_status)
+            self.base_lat_update_ready__signal.emit(self.current_base_lat)
+            self.base_lon_update_ready__signal.emit(self.current_base_lon)
+            self.rover_lat_update_ready__signal.emit(self.current_rover_lat)
+            self.rover_lon_update_ready__signal.emit(self.current_rover_lon)
+            self.bearing_update_ready__signal.emit(self.current_bearing)
+            self.base_fix_update_ready__signal.emit(self.current_base_status)
+            self.rover_fix_update_ready__signal.emit(self.current_rover_status)
 
 
     def connect_signals_and_slots(self):
