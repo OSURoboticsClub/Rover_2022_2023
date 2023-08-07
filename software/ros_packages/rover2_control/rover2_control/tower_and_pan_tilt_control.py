@@ -143,6 +143,7 @@ class TowerPanTiltControl(Node):
 
         except Exception as error:
             pass
+            # print("pantilt", error)
             # print "Error occurred:", error
 
         try:
@@ -152,6 +153,7 @@ class TowerPanTiltControl(Node):
 
         except Exception as error:
             pass
+            # print("tower", error)
             # print "Error occurred:", error
 
         if (time() - self.modbus_nodes_seen_time) > NODE_LAST_SEEN_TIMEOUT:
