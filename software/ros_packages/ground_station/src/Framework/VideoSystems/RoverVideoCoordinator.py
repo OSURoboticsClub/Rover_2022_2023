@@ -152,10 +152,14 @@ class RoverVideoCoordinator(QtCore.QThread):
         elif self.current_label_for_joystick_adjust == 2:  # tertiary
             setting = self.tertiary_label_current_setting
 
+        print(setting, self.chassis_index, self.main_nav_index)
+
         if setting == self.main_nav_index:
-            self.pan_tilt_selection_changed__signal.emit("chassis_pan_tilt") #temp change while cameras aren't all connected
+            self.pan_tilt_selection_changed__signal.emit("tower_pan_tilt") #temp change while cameras aren't all connected
+            print("got tower")
         elif setting == self.chassis_index:
             self.pan_tilt_selection_changed__signal.emit("chassis_pan_tilt")
+            print("got chassis")
         else:
             self.pan_tilt_selection_changed__signal.emit("no_pan_tilt")
 
@@ -238,10 +242,12 @@ class RoverVideoCoordinator(QtCore.QThread):
         if "main_navigation" in names:
             self.valid_cameras.append("main_navigation")
             self.main_nav_index = current_count
+            print("got main nav")
             current_count += 1
 
         if "chassis" in names:
             self.valid_cameras.append("chassis")
+            print("got chassis")
             self.chassis_index = current_count
 
         if "undercarriage" in names:
@@ -250,7 +256,8 @@ class RoverVideoCoordinator(QtCore.QThread):
         if "end_effector" in names:
             self.valid_cameras.append("end_effector")
 
-        self.valid_cameras.append("chassis")
+        self.valid_cameras.append("main_navigation")
+        
 
     def __setup_video_threads(self):
         #print(self.valid_cameras)
@@ -374,7 +381,7 @@ class RoverVideoCoordinator(QtCore.QThread):
     def on_gui_selected_camera_toggled(self):
         if self.current_label_for_joystick_adjust == 0: # primary
             if self.primary_label_current_setting in self.disabled_cameras:
-                self.disabled_cameras.remove(self.primary_label_current_setting)
+                self.disabled_cameras.rprintemove(self.primary_label_current_setting)
             else:
                 self.disabled_cameras.append(self.primary_label_current_setting)
             self.camera_threads[self.valid_cameras[self.primary_label_current_setting]].toggle_video_display()
