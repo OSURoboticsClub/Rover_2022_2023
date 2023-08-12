@@ -14,7 +14,7 @@ import minimalmodbus
 # from std_msgs.msg import UInt8, UInt16
 
 # Custom Imports
-from rover2_control_interface.msg import MiningControlMessage, MiningStatusMessage, GripperControlMessage, GripperStatusMessage, CameraControlMessage, DrillControlMessage
+from rover2_control_interface.msg import GripperControlMessage, GripperStatusMessage, MiningControlMessage, DrillControlMessage
 
 #####################################
 # Global Variables
@@ -22,24 +22,22 @@ from rover2_control_interface.msg import MiningControlMessage, MiningStatusMessa
 NODE_NAME = "effectors_control"
 
 # ##### Communication Defines #####
-DEFAULT_GRIPPER_PORT = "/dev/rover/ttyEffectors"
-DEFAULT_MINING_PORT = "/dev/rover/ttyMining"
-# DEFAULT_PORT = "/dev/ttyUSB0"
+DEFAULT_PORT = "/dev/rover/ttyEffectors"
 DEFAULT_BAUD = 115200
 
-GRIPPER_NODE_ID = 1
-DRILL_NODE_ID = 2
-MINING_NODE_ID = 3
+GRIPPER_NODE_ID = 1 #reflash science board, check lin act board, flash drill board
+LINEAR_NODE_ID = 2
+DRILL_NODE_ID = 3
+SCIENCE_NODE_ID = 4
 
 GRIPPER_TIMEOUT = 0.5
-MINING_TIMEOUT = 0.3
+LINEAR_TIMEOUT = 0.3
+SCIENCE_TIMEOUT = 0.3
 DRILL_TIMEOUT = 0.3
 
-MINING_HALF_REG_LIMIT = 15
-MINING_REMAINING_REGS = 17
-
 FAILED_GRIPPER_MODBUS_LIMIT = 20
-FAILED_MINING_MODBUS_LIMIMT = 20
+FAILED_LINEAR_MODBUS_LIMIT = 20
+FAILED_SCIENCE_MODBUS_LIMIT = 20
 FAILED_DRILL_MODBUS_LIMIMT = 20
 
 RX_DELAY = 0.01
@@ -49,13 +47,9 @@ DEFAULT_HERTZ = 40
 
 GRIPPER_CONTROL_SUBSCRIBER_TOPIC = "gripper/control"
 GRIPPER_STATUS_PUBLISHER_TOPIC = "gripper/status"
-
-MINING_CONTROL_SUBSCRIBER_TOPIC = "mining/control"
-MINING_STATUS_PUBLISHER_TOPIC = "mining/status"
-
+SCIENCE_CONTROL_SUBSCRIBER_TOPIC = "mining/control/compartment"
+LINEAR_CONTROL_SUBSCRIBER_TOPIC = "mining/control/linear"
 DRILL_CONTROL_SUBSCRIBER_TOPIC = "mining/drill/control"
-
-CAMERA_CONTROL_SUBSCRIBER_TOPIC = "camera/control"
 
 # ##### Gripper Defines #####
 GRIPPER_MODBUS_REGISTERS = {
@@ -89,62 +83,44 @@ DEFAULT_GRIPPER_REGISTERS = [
 
 GRIPPER_UNIVERSAL_POSITION_MAX = 10000
 
-# ##### Mining Defines #####
-# ##### These are divided into two parts to avoid CRC errors over modbus. #####
-MINING_MODBUS_REGISTERS = {
-    "CAM_ZOOM_IN_FULL": 0,
-    "CAM_ZOOM_OUT_FULL": 1,
-    "CAM_ZOOM_IN": 2,
-    "CAM_ZOOM_OUT": 3,
-    "CAM_SHOOT": 4,
-    "CAM_CHANGE_VIEW": 5,
-
-    "PROBE_TAKE_READING": 6,
-    "PROBE_TEMP_C": 7,
-    "PROBE_MOISTURE": 8,
-    "PROBE_LOSS_TANGENT": 9,
-    "PROBE_SOIL_ELEC_COND": 10,
-    "PROBE_REAL_DIELEC_PERM": 11,
-    "PROBE_IMAG_DIELEC_PERM": 12,
-
-    "MOTOR_SET_POSITION_POSITIVE": 13,
-    "MOTOR_SET_POSITION_NEGATIVE": 14
+# ##### Science Defines #####
+SCIENCE_MODBUS_REGISTERS = {
+    "STEPPER_POSITION": 0,
+    "CAMERA_SELECT": 1,
+    "LAZER_EN": 2,
+    "LIM_SW1": 3,
+    "LIM_SW2": 4,
+    "LIM_SW3": 5,
+    "LIM_SW4": 6
 }
 
-MINING_MODBUS_REGISTERS_PART_2 = {
-    "MOTOR_SET_POSITION_ABSOLUTE": 0,
-    "MOTOR_GO_HOME": 1,
+DEFAULT_SCIENCE_REGISTERS = [0]*7
 
-    "LINEAR_SET_POSITION_POSITIVE": 2,
-    "LINEAR_SET_POSITION_NEGATIVE": 3,
-    "LINEAR_SET_POSITION_ABSOLUTE": 4,
+LINEAR_MODBUS_REGISTERS = {
+    "DIRECTION": 0,
+    "SPEED": 1,
+    "SLEEP": 2,
 
-    "LINEAR_CURRENT_POSITION": 5,
-    "MOTOR_CURRENT_POSITION": 6,
+    "CURRENT": 3,
+    "FAULT": 4,
 
-    "TEMP1": 7,
-    "TEMP2": 8,
-
-    "MOTOR_CURRENT": 9,
-    "LINEAR_CURRENT": 10,
-
-    "SERVO1_TARGET": 11,
-    "SERVO2_TARGET": 12,
-
-    "SWITCH1_OUT": 13,
-    "SWITCH2_OUT": 14,
-
-    "OVERTRAVEL": 15,
-    "HOMING_NEEDED": 16
+    "TEMPERATURE": 5
 }
 
-
-MINING_POSITIONAL_THRESHOLD = 20
+DEFAULT_LINEAR_REGISTERS = [0]*6
 
 DRILL_MODBUS_REGISTERS = {
     "DIRECTION": 0,
-    "SPEED": 1
+    "SPEED": 1,
+    "SLEEP": 2,
+
+    "CURRENT": 3,
+    "FAULT": 4,
+
+    "TEMPERATURE": 5
 }
+
+DEFAULT_DRILL_REGISTERS = [0]*6
 
 # ##### Science Defines #####
 
@@ -162,21 +138,20 @@ UINT16_MAX = 65535
 class EffectorsControl(Node):
     EFFECTORS = [
         "GRIPPER",
-        "MINING"
+        "SCIENCE"
     ]
 
     def __init__(self):
         super().__init__(NODE_NAME)
 
-        self.gripper_port = self.declare_parameter("~gripper_port", DEFAULT_GRIPPER_PORT).value
-        self.mining_port = self.declare_parameter('~mining_port', DEFAULT_MINING_PORT).value
-        self.drill_port = self.declare_parameter("~drill_port", DEFAULT_MINING_PORT).value
+        self.port = self.declare_parameter("~port", DEFAULT_PORT).value
         self.baud = self.declare_parameter("~baud", DEFAULT_BAUD).value
 
         
         self.gripper_node_id = self.declare_parameter("~gripper_node_id", GRIPPER_NODE_ID).value
-        self.mining_node_id = self.declare_parameter("~mining_node_id", MINING_NODE_ID).value
+        self.science_node_id = self.declare_parameter("~science_node_id", SCIENCE_NODE_ID).value
         self.drill_node_id = self.declare_parameter("~drill_node_id", DRILL_NODE_ID).value
+        self.linear_node_id = self.declare_parameter("~linear_node_id", LINEAR_NODE_ID).value
 
         
         self.gripper_control_subscriber_topic = self.declare_parameter("~gripper_control_subscriber_topic",
@@ -185,27 +160,21 @@ class EffectorsControl(Node):
         self.gripper_status_publisher_topic = self.declare_parameter("~gripper_status_publisher_topic",
                                                               GRIPPER_STATUS_PUBLISHER_TOPIC).value                                                      
 
-        self.mining_control_subscriber_topic = self.declare_parameter("~mining_control_subscriber_topic",
-                                                             MINING_CONTROL_SUBSCRIBER_TOPIC).value                                                     
+        self.science_control_subscriber_topic = self.declare_parameter("~science_control_subscriber_topic",
+                                                             SCIENCE_CONTROL_SUBSCRIBER_TOPIC).value                                                     
         
         self.drill_control_subscriber_topic = self.declare_parameter("~drill_control_subscriber_topic",
                                                                DRILL_CONTROL_SUBSCRIBER_TOPIC).value
 
-        self.mining_status_publisher_topic = self.declare_parameter("~mining_status_publisher_topic",
-                                                             MINING_STATUS_PUBLISHER_TOPIC).value
-
-        self.camera_control_subscriber_topic = self.declare_parameter("~camera_control_subscriber_topic",
-                                                                CAMERA_CONTROL_SUBSCRIBER_TOPIC).value
+        self.linear_control_subscriber_topic = self.declare_parameter("~linear_control_subscriber_topic",
+                                                               LINEAR_CONTROL_SUBSCRIBER_TOPIC).value
 
         self.wait_time = 1.0 / self.declare_parameter("~hertz", DEFAULT_HERTZ).value
 
         self.gripper_node = None  # type:minimalmodbus.Instrument
-        self.mining_node = None  # type:minimalmodbus.Instrument
+        self.science_node = None  # type:minimalmodbus.Instrument
         self.drill_node = None  # type:minimalmodbus.Instrument
-
-        self.gripper_node_present = False
-        self.mining_node_present = True
-        self.drill_node_present = True
+        self.linear_node = None
 
         self.connect_to_nodes()
         # self.check_which_nodes_present()
@@ -213,29 +182,26 @@ class EffectorsControl(Node):
         # ##### Subscribers #####
         self.gripper_control_subscriber = self.create_subscription(GripperControlMessage, self.gripper_control_subscriber_topic, self.gripper_control_message_received_callback, 1)
 
-        self.mining_control_subscriber = self.create_subscription(MiningControlMessage, self.mining_control_subscriber_topic, self.mining_control_message_received_callback, 1)
+        self.science_control_subscriber = self.create_subscription(MiningControlMessage, self.science_control_subscriber_topic, self.science_control_message_received_callback, 1)
         
         self.drill_control_subscriber = self.create_subscription(DrillControlMessage, self.drill_control_subscriber_topic, self.drill_control_message_received_callback, 1)
         
-        self.camera_control_subscriber = self.create_subscription(CameraControlMessage, self.camera_control_subscriber_topic, self.camera_control_message_received_callback, 1)
+        self.linear_control_subscriber = self.create_subscription(DrillControlMessage, self.linear_control_subscriber_topic, self.linear_control_message_received_callback, 1)
 
         # ##### Publishers #####
         self.gripper_status_publisher = self.create_publisher(GripperStatusMessage, self.gripper_status_publisher_topic, 1)
-
-        self.mining_status_publisher = self.create_publisher(MiningStatusMessage, self.mining_status_publisher_topic, 1)
 
         # ##### Misc #####
         self.modbus_nodes_seen_time = time()
 
         # ##### Mining Variables #####
-        self.mining_registers = [0] * MINING_HALF_REG_LIMIT  # Weird stuff to read twice to resolve CRC errors
-        self.mining_registers_part_2 = [0] * MINING_REMAINING_REGS  # For reading the last 17 registers
-        self.gripper_registers = None
-        
-        self.drill_registers = None
+        self.science_registers = DEFAULT_SCIENCE_REGISTERS
+        self.gripper_registers = DEFAULT_GRIPPER_REGISTERS
+        self.drill_registers = DEFAULT_DRILL_REGISTERS
+        self.linear_registers = DEFAULT_LINEAR_REGISTERS
 
-        self.mining_control_message = None  # type:MiningControlMessage
-        self.new_mining_control_message = False
+        self.science_control_message = None  # type:MiningControlMessage
+        self.new_science_control_message = False
 
         self.gripper_control_message = None
         self.new_gripper_control_message = False
@@ -243,31 +209,35 @@ class EffectorsControl(Node):
         self.drill_control_message = None  # type:DrillControlMessage
         self.new_drill_control_message = False
 
+        self.linear_control_message = None
+        self.new_linear_control_message = False
+
         self.camera_control_message = None  # type: CameraControlMessage
         self.new_camera_control_message = False
 
         self.failed_gripper_modbus_count = 0
-        self.failed_mining_modbus_count = 0
-        self.failed_dril_modbus_count = 0
+        self.failed_science_modbus_count = 0
+        self.failed_drill_modbus_count = 0
+        self.failed_linear_modbus_count = 0
 
         self.which_effector = self.EFFECTORS.index("GRIPPER")
 
         self.gripper_position_status = 0
 
-        self.linear_curr_position = 0
-        self.motor_curr_position = 0
-
         self.timer = self.create_timer(self.wait_time, self.main_loop)
 
     def __setup_minimalmodbus_for_485(self):
-        self.gripper_node.serial = serial.rs485.RS485(self.gripper_port, baudrate=self.baud, timeout=GRIPPER_TIMEOUT)
+        self.gripper_node.serial = serial.rs485.RS485(self.port, baudrate=self.baud, timeout=GRIPPER_TIMEOUT)
         self.gripper_node.serial.rs485_mode = serial.rs485.RS485Settings(rts_level_for_rx=1, rts_level_for_tx=0, delay_before_rx=RX_DELAY, delay_before_tx=TX_DELAY)
 
-        self.mining_node.serial = serial.rs485.RS485(self.mining_port, baudrate=self.baud, timeout=MINING_TIMEOUT)
-        self.mining_node.serial.rs485_mode = serial.rs485.RS485Settings(rts_level_for_rx=1, rts_level_for_tx=0, delay_before_rx=RX_DELAY, delay_before_tx=TX_DELAY)
+        self.science_node.serial = serial.rs485.RS485(self.port, baudrate=self.baud, timeout=SCIENCE_TIMEOUT)
+        self.science_node.serial.rs485_mode = serial.rs485.RS485Settings(rts_level_for_rx=1, rts_level_for_tx=0, delay_before_rx=RX_DELAY, delay_before_tx=TX_DELAY)
 
-        self.drill_node.serial = serial.rs485.RS485(self.drill_port, baudrate=self.baud, timeout=DRILL_TIMEOUT)
+        self.drill_node.serial = serial.rs485.RS485(self.port, baudrate=self.baud, timeout=DRILL_TIMEOUT)
         self.drill_node.serial.rs485_mode = serial.rs485.RS485Settings(rts_level_for_rx=1, rts_level_for_tx=0, delay_before_rx=RX_DELAY, delay_before_tx=TX_DELAY)
+
+        self.linear_node.serial = serial.rs485.RS485(self.port, baudrate=self.baud, timeout=LINEAR_TIMEOUT)
+        self.linear_node.serial.rs485_mode = serial.rs485.RS485Settings(rts_level_for_rx=1, rts_level_for_tx=0, delay_before_rx=RX_DELAY, delay_before_tx=TX_DELAY)
 
 
     def main_loop(self):
@@ -281,203 +251,64 @@ class EffectorsControl(Node):
 
             if self.failed_gripper_modbus_count == FAILED_GRIPPER_MODBUS_LIMIT:
                 print("Gripper not present. Trying mining.")
-                self.which_effector = self.EFFECTORS.index("MINING")
+                self.which_effector = self.EFFECTORS.index("SCIENCE")
 
-        elif self.which_effector == self.EFFECTORS.index("MINING"):
+        elif self.which_effector == self.EFFECTORS.index("SCIENCE"):
             try:
-                self.run_mining()
-                self.failed_mining_modbus_count = 0
+                self.run_science()
+                self.failed_science_modbus_count = 0
             except Exception as e:
                 print(e)
-                self.failed_mining_modbus_count += 1
+                self.failed_science_modbus_count += 1
 
-            if self.failed_mining_modbus_count == FAILED_MINING_MODBUS_LIMIMT:
+            if self.failed_science_modbus_count == FAILED_SCIENCE_MODBUS_LIMIMT:
                 print("No effectors present. Exiting....")
                 self.destroy_node()
                 return
 
     def run_arm(self):
         self.process_gripper_control_message()
+        self.process_linear_control_message()
         self.send_gripper_status_message()
 
-    def run_mining(self):
-        self.process_mining_control_message()
-        self.send_mining_status_message()
+    def run_science(self):
+        self.process_science_control_message()
         self.process_drill_control_messages()
-        self.process_camera_control_message()
+        self.process_linear_control_message()
 
     def connect_to_nodes(self):
-        self.gripper_node = minimalmodbus.Instrument(self.gripper_port, int(self.gripper_node_id))
-        self.mining_node = minimalmodbus.Instrument(self.mining_port, int(self.mining_node_id))
-        self.drill_node = minimalmodbus.Instrument(self.drill_port, int(self.drill_node_id))
+        self.gripper_node = minimalmodbus.Instrument(self.port, int(self.gripper_node_id))
+        self.science_node = minimalmodbus.Instrument(self.port, int(self.science_node_id))
+        self.drill_node = minimalmodbus.Instrument(self.port, int(self.drill_node_id))
+        self.linear_node = minimalmodbus.Instrument(self.port, int(self.linear_node_id))
 
         self.__setup_minimalmodbus_for_485()
 
     def process_mining_control_message(self):
-        print("process mining control entered")
-        if not self.mining_registers or not self.mining_registers_part_2:
-            # Read around half of registers first to avoid reading 32 registers at a time. 
-            # This seems to prevent CRC errors.
-            self.mining_registers = self.mining_node.read_registers(0, MINING_HALF_REG_LIMIT)
-            self.mining_registers_part_2 = self.mining_node.read_registers(MINING_HALF_REG_LIMIT, MINING_REMAINING_REGS)
+        if self.new_mining_control_message:
+            self.science_registers[SCIENCE_MODBUS_REGISTERS["STEPPER_POSITION"]] = 465 * self.science_control_message.compartment
+            self.science_node.write_registers(0, self.science_registers)
+            self.modbus_nodes_seen_time = time()
+            self.new_science_control_message = False
 
-        print("mining registers read")
-        if self.new_mining_control_message and self.mining_node_present:
-            print(self.mining_control_message)
-            motor_go_home = self.mining_control_message.motor_go_home
-            motor_set_position_positive = self.mining_control_message.motor_set_position_positive
-            motor_set_position_negative = self.mining_control_message.motor_set_position_negative
-            motor_set_position_absolute = self.mining_control_message.motor_set_position_absolute
+    def process_linear_control_message(self):
+        if self.new_linear_control_message:
+            direction = self.linear_control_message.direction
+            self.linear_registers[LINEAR_MODBUS_REGISTERS["DIRECTION"]] = direction
 
-            # Prevent input value from being too small when writing register
-            if self.motor_curr_position + motor_set_position_absolute >= 0:
-                new_motor_absolute_target = self.motor_curr_position + motor_set_position_absolute
+            self.science_registers = self.science_node.read_registers(0, len(self.science_registers))
+            is_lim_hit = any(self.science_registers[SCIENCE_MODBUS_REGISTERS["LIM_SW1"]:SCIENCE_MODBUS_REGISTERS["LIM_SW4"]+1])
+            if not is_lim_hit or not direction: #check this!!!
+                self.linear_registers[LINEAR_MODBUS_REGISTERS["SPEED"]] = min(self.linear_control_message.speed, UINT16_MAX)
             else:
-                new_motor_absolute_target = 0
+                self.linear_registers[LINEAR_MODBUS_REGISTERS["SPEED"]] = 0
 
-            motor_stop = self.mining_control_message.motor_stop
-            print(new_motor_absolute_target, motor_set_position_absolute, self.motor_curr_position)
-
-            linear_set_position_positive = self.mining_control_message.linear_set_position_positive
-            linear_set_position_negative = self.mining_control_message.linear_set_position_negative
-            linear_set_position_absolute = self.mining_control_message.linear_set_position_absolute
-            if self.linear_curr_position + linear_set_position_absolute >= 0:
-                new_linear_absolute_target = self.linear_curr_position + linear_set_position_absolute
-            else:
-                new_linear_absolute_target = 0
-
-            linear_stop = self.mining_control_message.linear_stop
-            
-            print(new_linear_absolute_target, linear_set_position_absolute, self.linear_curr_position)
-
-            servo1_target = self.mining_control_message.servo1_target
-            servo2_target = self.mining_control_message.servo2_target
-
-            switch1_on = self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["SWITCH1_OUT"]]
-            switch2_on = self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["SWITCH2_OUT"]]
-            overtravel_on = self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["OVERTRAVEL"]]
-
-            if motor_go_home:
-                self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["MOTOR_GO_HOME"]] = 1
-                print("MINING MOTOR_GO_HOME TRUE")
-                self.mining_node.write_registers(MINING_HALF_REG_LIMIT, self.mining_registers_part_2)
-                
-            if motor_set_position_absolute != 0:
-                self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["MOTOR_SET_POSITION_ABSOLUTE"]] = new_motor_absolute_target
-                print(self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["MOTOR_SET_POSITION_ABSOLUTE"]])
-                print(MINING_MODBUS_REGISTERS_PART_2["MOTOR_SET_POSITION_ABSOLUTE"])
-            if linear_set_position_absolute != 0:
-                self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["LINEAR_SET_POSITION_ABSOLUTE"]] = new_linear_absolute_target
-            if servo1_target >= 0:
-                self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["SERVO1_TARGET"]] = servo1_target
-            if servo2_target >= 0:
-                self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["SERVO2_TARGET"]] = servo2_target
-
-            if motor_set_position_positive > 0 and (not switch1_on or overtravel_on):
-                self.mining_registers[MINING_MODBUS_REGISTERS["MOTOR_SET_POSITION_POSITIVE"]] = motor_set_position_positive
-                self.mining_registers[MINING_MODBUS_REGISTERS["MOTOR_SET_POSITION_NEGATIVE"]] = 0
-            elif motor_set_position_negative > 0 and not switch2_on:
-                self.mining_registers[MINING_MODBUS_REGISTERS["MOTOR_SET_POSITION_NEGATIVE"]] = motor_set_position_negative
-                self.mining_registers[MINING_MODBUS_REGISTERS["MOTOR_SET_POSITION_POSITIVE"]] = 0
-            elif motor_stop:
-               self.mining_registers[MINING_MODBUS_REGISTERS["MOTOR_SET_POSITION_POSITIVE"]] = 0
-               self.mining_registers[MINING_MODBUS_REGISTERS["MOTOR_SET_POSITION_NEGATIVE"]] = 0
-
-            if linear_set_position_positive > 0:
-                self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["LINEAR_SET_POSITION_POSITIVE"]] = linear_set_position_positive
-                self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["LINEAR_SET_POSITION_NEGATIVE"]] = 0
-            elif linear_set_position_negative > 0:
-                self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["LINEAR_SET_POSITION_NEGATIVE"]] = linear_set_position_negative
-                self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["LINEAR_SET_POSITION_POSITIVE"]] = 0
-            elif linear_stop:
-                self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["LINEAR_SET_POSITION_POSITIVE"]] = 0
-                self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["LINEAR_SET_POSITION_NEGATIVE"]] = 0
-
-            if self.mining_control_message.overtravel:
-                self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["OVERTRAVEL"]] = 0 if self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["OVERTRAVEL"]] else 1
-                self.mining_control_message.overtravel = False
-
-            if self.mining_control_message.motor_go_home:
-                self.mining_registers[MINING_MODBUS_REGISTERS_PART_2["MOTOR_GO_HOME"]] = 0 if self.mining_registers[MINING_MODBUS_REGISTERS_PART_2["MOTOR_GO_HOME"]] else 1
-                self.mining_control_message.motor_go_home = False
-
-            if self.mining_control_message.probe_take_reading:
-                self.mining_registers[MINING_MODBUS_REGISTERS["PROBE_TAKE_READING"]] = 1
-
-            print(self.mining_registers)
-            print(self.mining_registers_part_2)
-            self.mining_node.write_registers(0, self.mining_registers)
-            self.mining_node.write_registers(MINING_HALF_REG_LIMIT, self.mining_registers_part_2)
-            print("wrote registers...")
-
-            self.modbus_nodes_seen_time = time()
-            self.new_mining_control_message = False
-
-    def process_camera_control_message(self):
-        if self.new_camera_control_message:
-            self.mining_registers[MINING_MODBUS_REGISTERS_PART_2["MOTOR_GO_HOME"]] = 0
-            self.mining_registers[MINING_MODBUS_REGISTERS["PROBE_TAKE_READING"]] = 0
-            self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["OVERTRAVEL"]] = 0
-
-            self.mining_registers[MINING_MODBUS_REGISTERS["CAM_CHANGE_VIEW"]] = self.camera_control_message.cam_change_view
-            self.mining_registers[MINING_MODBUS_REGISTERS["CAM_ZOOM_IN"]] = self.camera_control_message.cam_zoom_in
-            self.mining_registers[MINING_MODBUS_REGISTERS["CAM_ZOOM_OUT"]] = self.camera_control_message.cam_zoom_out
-            self.mining_registers[MINING_MODBUS_REGISTERS["CAM_ZOOM_IN_FULL"]] = self.camera_control_message.cam_zoom_in_full
-            self.mining_registers[MINING_MODBUS_REGISTERS["CAM_ZOOM_OUT_FULL"]] = self.camera_control_message.cam_zoom_out_full
-            self.mining_registers[MINING_MODBUS_REGISTERS["CAM_SHOOT"]] = self.camera_control_message.cam_shoot
-
-            self.mining_node.write_registers(0, self.mining_registers)
-            self.mining_node.write_registers(MINING_HALF_REG_LIMIT, self.mining_registers_part_2)
+            self.linear_node.write_registers(0, self.linear_registers)
             self.modbus_nodes_seen_time = time()
 
-            self.new_camera_control_message = False
-
-    def send_mining_status_message(self):
-        print("send mining statuses entered")
-        if self.mining_node_present:
-            self.mining_registers = self.mining_node.read_registers(0, MINING_HALF_REG_LIMIT)
-            self.mining_registers_part_2 = self.mining_node.read_registers(MINING_HALF_REG_LIMIT, MINING_REMAINING_REGS)
-            print("read mining registers")
-            
-            print("making status message")
-            message = MiningStatusMessage()
-            print("made status message")
-
-            self.linear_curr_position = message.linear_current_position
-            self.motor_curr_position = message.motor_current_position
-            
-            message.probe_temp_c = self.mining_registers[MINING_MODBUS_REGISTERS["PROBE_TEMP_C"]]
-            message.probe_moisture = self.mining_registers[MINING_MODBUS_REGISTERS["PROBE_MOISTURE"]]
-            message.probe_loss_tangent = self.mining_registers[MINING_MODBUS_REGISTERS["PROBE_LOSS_TANGENT"]]
-            message.probe_soil_elec_cond = self.mining_registers[MINING_MODBUS_REGISTERS["PROBE_SOIL_ELEC_COND"]]
-            message.probe_real_dielec_perm = self.mining_registers[MINING_MODBUS_REGISTERS["PROBE_REAL_DIELEC_PERM"]]
-            message.probe_imag_dielec_perm = self.mining_registers[MINING_MODBUS_REGISTERS["PROBE_IMAG_DIELEC_PERM"]]
-
-            message.linear_current_position = self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["LINEAR_CURRENT_POSITION"]]
-
-            message.motor_current_position = self.mining_registers[MINING_MODBUS_REGISTERS_PART_2["MOTOR_CURRENT_POSITION"]]
-
-            message.temp1 = self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["TEMP1"]]
-            message.temp2 = self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["TEMP2"]]
-
-            message.motor_current = self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["MOTOR_CURRENT"]]
-            message.linear_current = self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["LINEAR_CURRENT"]]
-
-            message.switch1_out = self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["SWITCH1_OUT"]]
-            message.switch2_out = self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["SWITCH2_OUT"]]
-            message.homing_needed = self.mining_registers_part_2[MINING_MODBUS_REGISTERS_PART_2["HOMING_NEEDED"]]
-
-            print(message)
-            print("publishing message...")
-            self.mining_status_publisher.publish(message)
-
-            self.modbus_nodes_seen_time = time()
+            self.new_linear_control_message = False
 
     def process_gripper_control_message(self):
-        if not self.gripper_registers:
-            self.gripper_registers = self.gripper_node.read_registers(0, len(GRIPPER_MODBUS_REGISTERS))
-            print(self.gripper_registers)
-
         if self.new_gripper_control_message:
             if self.gripper_control_message.should_home:
                 print("GRIPPER SHOULD_HOME TRUE")
@@ -548,12 +379,11 @@ class EffectorsControl(Node):
         self.gripper_status_publisher.publish(message)
 
     def process_drill_control_messages(self):
-        if self.new_drill_control_message and self.drill_node_present:
+        if self.new_drill_control_message:
             self.drill_registers[DRILL_MODBUS_REGISTERS["DIRECTION"]] = self.drill_control_message.direction
             self.drill_registers[DRILL_MODBUS_REGISTERS["SPEED"]] = self.drill_control_message.speed
- 
+
             self.drill_node.write_registers(0, self.drill_registers)
-            self.gripper_control_message = None
             self.modbus_nodes_seen_time = time()
             self.new_drill_control_message = False
 
@@ -561,17 +391,17 @@ class EffectorsControl(Node):
         self.gripper_control_message = control_message
         self.new_gripper_control_message = True
 
-    def mining_control_message_received_callback(self, control_message):
-        self.mining_control_message = control_message
-        self.new_mining_control_message = True
+    def science_control_message_received_callback(self, control_message):
+        self.science_control_message = control_message
+        self.new_science_control_message = True
 
     def drill_control_message_received_callback(self, control_message):
         self.drill_control_message = control_message
         self.new_drill_control_message = True
 
-    def camera_control_message_received_callback(self, control_message):
-        self.camera_control_message = control_message
-        self.new_camera_control_message = True
+    def linear_control_message_received_callback(self, control_message):
+        self.linear_control_message = control_message
+        self.new_linear_control_message = True
 
 
 def main(args=None):

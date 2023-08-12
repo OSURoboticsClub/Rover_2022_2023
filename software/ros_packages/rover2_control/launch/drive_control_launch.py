@@ -41,7 +41,7 @@ def generate_launch_description():
                 '~port': '/dev/rover/ttyLEFT',
                 '~drive_control_topic': 'drive_control/left',
                 '~drive_control_status_topic': 'drive_status/left',
-                #'~invert_first_motor': True,
+                '~invert_first_motor': True,
                 '~invert_second_motor': True
             }],
             **config

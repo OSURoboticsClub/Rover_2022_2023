@@ -9,6 +9,7 @@ from rclpy.node import Node
 from time import time, sleep
 
 import serial.rs485
+# import modbus_master as minimalmodbus
 import minimalmodbus
 
 from std_msgs.msg import UInt8, UInt16
@@ -28,7 +29,7 @@ DEFAULT_INVERT = False
 
 DEFAULT_PAN_TILT_CONTROL_TOPIC = "chassis/pan_tilt/control"
 
-PAN_TILT_NODE_ID = 1
+PAN_TILT_NODE_ID = 2
 
 COMMUNICATIONS_TIMEOUT = 0.01  # Seconds
 
@@ -106,6 +107,7 @@ class ChassisPanTiltControl(Node):
             self.modbus_nodes_seen_time = time()
 
         except Exception as error:
+            # print(error)
             pass
 
         if (time() - self.modbus_nodes_seen_time) > NODE_LAST_SEEN_TIMEOUT:

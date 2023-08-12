@@ -14,18 +14,20 @@ def generate_launch_description():
             executable='rover_camera',
             name='navigation',
             parameters=[{
-                'device_path': '/dev/rover/camera_main_navigation'
+                'device_path': '/dev/rover/camera_main_navigation',
+                'base_topic': 'cameras/main_navigation'
             }],
-            #prefix=['sudo taskset -c 1'],
+            #prefix=["sudo taskset -c 3"],
             **config
         ),
         Node(
             package='rover2_camera',
             executable='rover_camera',
             name='chassis',
-            #prefix=['sudo taskset -c 2'],
+            #prefix=["sudo taskset -c 4"],
             parameters=[{
-                'device_path': '/dev/rover/camera_chassis'
+                'device_path': '/dev/rover/camera_chassis',
+                'base_topic': 'cameras/chassis'
             }],
             **config
         )

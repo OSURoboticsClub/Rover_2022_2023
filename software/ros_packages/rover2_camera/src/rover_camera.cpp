@@ -30,6 +30,8 @@ public:
         small_image_width = this->declare_parameter("small_image_width", 256);
         small_image_height = this->declare_parameter("small_image_height", 144);
 
+        base_topic = this->declare_parameter("base_topic", "cameras/main_navigation");
+
         broadcast_large_image = false;
         broadcast_medium_image = false;
         broadcast_small_image = true;
@@ -47,9 +49,9 @@ public:
             cap->set(cv::CAP_PROP_FPS, fps);
         }
 
-        large_image_node_name = "image_" + std::to_string(large_image_width) + "x" + std::to_string(large_image_height);
-        medium_image_node_name = "image_" + std::to_string(medium_image_width) + "x" + std::to_string(medium_image_height);
-        small_image_node_name = "image_" + std::to_string(small_image_width) + "x" + std::to_string(small_image_height);
+        large_image_node_name = base_topic + "/image_" + std::to_string(large_image_width) + "x" + std::to_string(large_image_height);
+        medium_image_node_name = base_topic + "/image_" + std::to_string(medium_image_width) + "x" + std::to_string(medium_image_height);
+        small_image_node_name = base_topic + "/image_" + std::to_string(small_image_width) + "x" + std::to_string(small_image_height);
 
         rclcpp::Node::SharedPtr node_handle_ = std::shared_ptr<RoverCamera>(this);
         large_image_transport = new image_transport::ImageTransport(node_handle_);
@@ -60,7 +62,7 @@ public:
         medium_image_publisher = medium_image_transport->advertise(medium_image_node_name, 1);
         small_image_publisher = small_image_transport->advertise(small_image_node_name, 1);
 
-        control_subscriber = this->create_subscription<rover2_camera_interface::msg::CameraControlMessage>("camera_control", 1, std::bind(&RoverCamera::control_callback, this, _1));
+        control_subscriber = this->create_subscription<rover2_camera_interface::msg::CameraControlMessage>(base_topic + "/camera_control", 1, std::bind(&RoverCamera::control_callback, this, _1));
 
         int period;
         if (is_rtsp_camera) {
@@ -149,6 +151,8 @@ private:
     bool broadcast_large_image;
     bool broadcast_medium_image;
     bool broadcast_small_image;
+
+    std::string base_topic;
 
     std::string large_image_node_name;
     std::string medium_image_node_name;

@@ -28,7 +28,8 @@ def generate_launch_description():
                 '~drive_control_topic': 'drive_control/rear',
                 '~drive_control_status_topic': 'drive_status/rear',
                 '~first_motor_id': 2,
-                '~second_motor_id': 1
+                '~second_motor_id': 1,
+                '~invert_first_motor': True
             }],
             **config
         ),
@@ -40,8 +41,8 @@ def generate_launch_description():
                 '~port': '/dev/rover/ttyLEFT',
                 '~drive_control_topic': 'drive_control/left',
                 '~drive_control_status_topic': 'drive_status/left',
-                '~invert_first_motor_id': True,
-                '~invert_second_motor_id': True
+                '~invert_first_motor': True,
+                '~invert_second_motor': True
             }],
             **config
         ),
@@ -66,20 +67,20 @@ def generate_launch_description():
         ),
         Node(
             package='rover2_control',
-            executable='tower_and_pan_tilt_control',
-            name='tower_and_pan_tilt',
-            **config
-        ),
-        Node(
-            package='rover2_control',
             executable='chassis_pan_tilt_control',
             name='chassis_pan_tilt',
             **config
         ),
         Node(
             package='rover2_control',
-            executable='effectors_control',
-            name='effectors',
+            executable='tower_and_pan_tilt_control',
+            name='tower_and_pan_tilt',
             **config
-        )
+        ),
+        #Node(
+        #    package='rover2_control',
+        #    executable='effectors_control',
+        #    name='effectors',
+        #    **config
+        #)
     ])
