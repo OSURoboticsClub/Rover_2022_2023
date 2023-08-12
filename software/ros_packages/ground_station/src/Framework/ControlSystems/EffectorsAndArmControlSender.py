@@ -10,7 +10,7 @@ from time import time
 import rclpy
 from rclpy.node import Node
 from rclpy.executors import SingleThreadedExecutor
-#from rover2_arm_interface.msg import ArmControlMessage
+from rover2_arm_interface.msg import ArmControlMessage
 from rover2_control_interface.msg import MiningControlMessage, GripperControlMessage, DrillControlMessage
 
 #####################################
@@ -21,12 +21,13 @@ GAME_CONTROLLER_NAME = "Afterglow Gamepad for Xbox 360"
 DRIVE_COMMAND_HERTZ = 20
 
 GRIPPER_CONTROL_TOPIC = "gripper/control"
-RELATIVE_ARM_CONTROL_TOPIC = "arm_control/relative"
+RELATIVE_ARM_CONTROL_TOPIC = "control/relative"
 LINEAR_CONTROL_TOPIC = "mining/control/linear"
 COMPARTMENT_CHANGE_TOPIC = "mining/control/compartment"
 DRILL_CONTROL_TOPIC = "mining/drill/control"
 
 GRIPPER_MOVEMENT_SCALAR = 300
+MAIN_SCALAR = 0.002
 
 LEFT_X_AXIS_DEADZONE = 1500
 LEFT_Y_AXIS_DEADZONE = 1500
@@ -129,7 +130,6 @@ class XBOXController(QtCore.QThread):
     def __setup_controller(self):
         for device in devices.gamepads:
             if device.name == GAME_CONTROLLER_NAME:
-                print("got controller")
                 self.gamepad = device
 
                 return True
@@ -180,6 +180,7 @@ class EffectorsAndArmControlSender(QtCore.QThread):
         self.drill_turn_clockwise_button = self.left_screen.drill_turn_clockwise_button  # type:QtWidgets.QPushButton
         self.drill_turn_counter_clockwise_button = self.left_screen.drill_turn_counter_clockwise_button  # type:QtWidgets.QPushButton
         self.drill_stop_button = self.left_screen.drill_stop_button  # type:QtWidgets.QPushButton
+        self.arm_speed_limit_slider = self.right_screen.arm_speed_limit_slider  # type: QtWidgets.QSlider
 
         # ########## Get the settings instance ##########
         self.settings = QtCore.QSettings()
@@ -204,12 +205,12 @@ class EffectorsAndArmControlSender(QtCore.QThread):
         #self.relative_arm_control_publisher = rospy.Publisher(RELATIVE_ARM_CONTROL_TOPIC, ArmControlMessage, queue_size=1)
         #self.tower_pan_tilt_command_publisher = rospy.Publisher(DEFAULT_TOWER_PAN_TILT_COMMAND_TOPIC, TowerPanTiltControlMessage, queue_size=1)
         #self.mining_control_publisher = rospy.Publisher(MINING_CONTROL_TOPIC, MiningControlMessage, queue_size=1)
-        #self.relative_arm_control_publisher = self.effectors_node.create_publisher(ArmControlMessage, RELATIVE_ARM_CONTROL_TOPIC, 1)
-        self.linear_control_publisher = self.effectors_node.create_publisher(MiningControlMessage, LINEAR_CONTROL_TOPIC, 1)
+        self.relative_arm_control_publisher = self.effectors_node.create_publisher(ArmControlMessage, RELATIVE_ARM_CONTROL_TOPIC, 1)
+        self.linear_control_publisher = self.effectors_node.create_publisher(DrillControlMessage, LINEAR_CONTROL_TOPIC, 1)
         self.drill_control_publisher = self.effectors_node.create_publisher(DrillControlMessage, DRILL_CONTROL_TOPIC, 1)
         self.compartment_control_publisher = self.effectors_node.create_publisher(MiningControlMessage, COMPARTMENT_CHANGE_TOPIC, 1)
 
-        self.xbox_current_control_state = self.XBOX_CONTROL_STATES.index("MINING")
+        self.xbox_current_control_state = self.XBOX_CONTROL_STATES.index("ARM")
         self.xbox_control_state_just_changed = False
 
         self.last_xbox_button_state = 0
@@ -229,8 +230,7 @@ class EffectorsAndArmControlSender(QtCore.QThread):
             self.change_control_state_if_needed()
 
             if self.xbox_current_control_state == self.XBOX_CONTROL_STATES.index("ARM"):
-                self.send_gripper_home_on_back_press()
-                #self.process_and_send_arm_control()
+                self.process_and_send_arm_control()
             elif self.xbox_current_control_state == self.XBOX_CONTROL_STATES.index("MINING"):
                 self.send_compartment_commands()
                 self.publish_linear_controls()
@@ -335,49 +335,45 @@ class EffectorsAndArmControlSender(QtCore.QThread):
     def on_kill_threads_requested__slot(self):
         self.run_thread_flag = False
 
-"""
     def process_and_send_arm_control(self):
+            arm_control_message = ArmControlMessage()
 
-        #arm_control_message = ArmControlMessage()
+            gripper_control_message = GripperControlMessage()
 
-        gripper_control_message = GripperControlMessage()
+            should_publish_arm = False
+            should_publish_gripper = False
 
-        should_publish_arm = False
-        should_publish_gripper = False
+            left_trigger = self.controller.controller_states["left_trigger"]
+            right_trigger = self.controller.controller_states["right_trigger"]
 
-        left_trigger = self.controller.controller_states["left_trigger"]
-        right_trigger = self.controller.controller_states["right_trigger"]
+            left_x_axis = self.controller.controller_states["left_x_axis"] if abs(self.controller.controller_states[
+                                                                                    "left_x_axis"]) > LEFT_X_AXIS_DEADZONE else 0
+            left_y_axis = self.controller.controller_states["left_y_axis"] if abs(self.controller.controller_states[
+                                                                                    "left_y_axis"]) > LEFT_Y_AXIS_DEADZONE else 0
+            right_y_axis = self.controller.controller_states["right_y_axis"] if abs(self.controller.controller_states[
+                                                                                        "right_y_axis"]) > RIGHT_Y_AXIS_DEADZONE else 0
 
-        left_x_axis = self.controller.controller_states["left_x_axis"] if abs(self.controller.controller_states[
-                                                                                  "left_x_axis"]) > LEFT_X_AXIS_DEADZONE else 0
-        left_y_axis = self.controller.controller_states["left_y_axis"] if abs(self.controller.controller_states[
-                                                                                  "left_y_axis"]) > LEFT_Y_AXIS_DEADZONE else 0
-        right_y_axis = self.controller.controller_states["right_y_axis"] if abs(self.controller.controller_states[
-                                                                                    "right_y_axis"]) > RIGHT_Y_AXIS_DEADZONE else 0
-        right_x_axis = self.controller.controller_states["right_x_axis"] if abs(self.controller.controller_states[
-                                                                                    "right_x_axis"]) > RIGHT_X_AXIS_DEADZONE else 0
+            speed_limit = self.arm_speed_limit_slider.value() / 100.0
 
-        speed_limit = self.arm_speed_limit_slider.value() / 100.0
+            if left_trigger > 0:
+                should_publish_arm = True
+                arm_control_message.main_pitch = ((left_x_axis / THUMB_STICK_MAX) * MAIN_SCALAR) * speed_limit
+                print(arm_control_message)
 
-        if left_trigger > 0:
-            should_publish_arm = True
-            arm_control_message.base = ((left_x_axis / THUMB_STICK_MAX) * BASE_SCALAR) * speed_limit
-            arm_control_message.shoulder = ((left_y_axis / THUMB_STICK_MAX) * SHOULDER_SCALAR) * speed_limit
-            arm_control_message.elbow = (-(right_y_axis / THUMB_STICK_MAX) * ELBOW_SCALAR) * speed_limit
-            arm_control_message.roll = (-(right_x_axis / THUMB_STICK_MAX) * ROLL_SCALAR) * speed_limit
+            elif right_trigger > 0:
+                should_publish_arm = True
+                should_publish_gripper = True
+                arm_control_message.wrist_roll = ((left_x_axis / THUMB_STICK_MAX) * 0.003) * speed_limit
+                arm_control_message.wrist_pitch = (-(left_y_axis / THUMB_STICK_MAX) * 0.003) * speed_limit
+                print(arm_control_message)
+                
+                gripper_control_message.target = int((-(right_y_axis / THUMB_STICK_MAX) * GRIPPER_MOVEMENT_SCALAR))
+                print(gripper_control_message)
+ 
+            if should_publish_arm:
+                self.relative_arm_control_publisher.publish(arm_control_message)
 
-        elif right_trigger > 0:
-            should_publish_arm = True
-            should_publish_gripper = True
-
-            arm_control_message.wrist_roll = ((left_x_axis / THUMB_STICK_MAX) * BASE_SCALAR) * speed_limit
-            arm_control_message.wrist_pitch = (-(left_y_axis / THUMB_STICK_MAX) * WRIST_PITCH_SCALAR) * speed_limit
-
-            gripper_control_message.target = int((-(right_y_axis / THUMB_STICK_MAX) * GRIPPER_MOVEMENT_SCALAR))
-        if should_publish_arm:
-            self.relative_arm_control_publisher.publish(arm_control_message)
-
-        if should_publish_gripper:
-            self.gripper_control_publisher.publish(gripper_control_message)
-            self.send_new_gripper_mode = False
-"""
+            if should_publish_gripper:
+                self.gripper_control_publisher.publish(gripper_control_message)
+                self.send_new_gripper_mode = False
+            
