@@ -9,8 +9,9 @@ from time import time
 
 import rclpy
 from rclpy.node import Node
-from rover_arm.msg import ArmControlMessage
-from rover_control.msg import MiningControlMessage, GripperControlMessage, TowerPanTiltControlMessage
+from rclpy.executors import SingleThreadedExecutor
+from rover2_arm_interface.msg import ArmControlMessage
+from rover2_control_interface.msg import MiningControlMessage, GripperControlMessage, DrillControlMessage
 
 #####################################
 # Global Variables
@@ -19,17 +20,11 @@ GAME_CONTROLLER_NAME = "Afterglow Gamepad for Xbox 360"
 
 DRIVE_COMMAND_HERTZ = 20
 
-GRIPPER_CONTROL_TOPIC = "/rover_control/gripper/control"
-RELATIVE_ARM_CONTROL_TOPIC = "/rover_arm/control/relative"
-DEFAULT_TOWER_PAN_TILT_COMMAND_TOPIC = "/rover_control/tower/pan_tilt/control"
-MINING_CONTROL_TOPIC = "/rover_control/mining/control"
-
-BASE_SCALAR = 0.003
-SHOULDER_SCALAR = 0.002
-ELBOW_SCALAR = 0.002
-ROLL_SCALAR = 0.003
-WRIST_PITCH_SCALAR = 0.003
-WRIST_ROLL_SCALAR = 0.006
+GRIPPER_CONTROL_TOPIC = "gripper/control"
+RELATIVE_ARM_CONTROL_TOPIC = "arm_control/relative"
+LINEAR_CONTROL_TOPIC = "mining/control/linear"
+COMPARTMENT_CHANGE_TOPIC = "mining/control/compartment"
+DRILL_CONTROL_TOPIC = "mining/drill/control"
 
 GRIPPER_MOVEMENT_SCALAR = 300
 
@@ -41,8 +36,8 @@ RIGHT_Y_AXIS_DEADZONE = 1500
 
 THUMB_STICK_MAX = 32768.0
 
-MINING_MOTOR_SCALAR = 500
-MINING_LINEAR_SCALAR = 40
+
+DRILL_SPEED = 150
 
 COLOR_GREEN = "background-color:darkgreen; border: 1px solid black;"
 COLOR_NONE = "border: 1px solid black;"
@@ -178,12 +173,15 @@ class EffectorsAndArmControlSender(QtCore.QThread):
 
         # ########## Reference to class init variables ##########
         self.shared_objects = shared_objects
-        self.left_screen = self.shared_objects["screens"]["left_screen"]
-        self.right_screen = self.shared_objects["screens"]["right_screen"]
+        self.left_screen = self.shared_objects["screens"]["onescreen"] 
+        self.right_screen = self.shared_objects["screens"]["onescreen"]
         self.xbox_mode_arm_label = self.right_screen.xbox_mode_arm_label  # type: QtWidgets.QLabel
         self.xbox_mode_mining_label = self.right_screen.xbox_mode_mining_label  # type: QtWidgets.QLabel
 
-        self.arm_speed_limit_slider = self.right_screen.arm_speed_limit_slider  # type: QtWidgets.QSlider
+        self.compartment_select  = self.left_screen.compartment_select #type: QtWidgets.QSpinBox
+
+        self.drill_turn_clockwise_button = self.left_screen.drill_turn_clockwise_button  # type:QtWidgets.QPushButton
+        self.drill_turn_counter_clockwise_button = self.left_screen.drill_turn_counter_clockwise_button  # type:QtWidgets.QPushButton
 
         # ########## Get the settings instance ##########
         self.settings = QtCore.QSettings()
@@ -207,8 +205,9 @@ class EffectorsAndArmControlSender(QtCore.QThread):
         #self.tower_pan_tilt_command_publisher = rospy.Publisher(DEFAULT_TOWER_PAN_TILT_COMMAND_TOPIC, TowerPanTiltControlMessage, queue_size=1)
         #self.mining_control_publisher = rospy.Publisher(MINING_CONTROL_TOPIC, MiningControlMessage, queue_size=1)
         self.relative_arm_control_publisher = self.effectors_node.create_publisher(ArmControlMessage, RELATIVE_ARM_CONTROL_TOPIC, 1)
-        self.tower_pan_tilt_command_publisher = self.effectors_node.create_publisher(TowerPanTiltControlMessage, DEFAULT_TOWER_PAN_TILT_COMMAND_TOPIC, 1)
-        self.mining_control_publisher = self.effectors_node.create_publisher(MiningControlMessage, MINING_CONTROL_TOPIC, 1)
+        self.linear_control_publisher = self.effectors_node.create_publisher(MiningControlMessage, LINEAR_CONTROL_TOPIC, 1)
+        self.drill_control_publisher = self.effectors_node.create_publisher(DrillControlMessage, DRILL_CONTROL_TOPIC, 1)
+        self.compartment_control_publisher = self.effectors_node.create_publisher(MiningControlMessage, COMPARTMENT_CHANGE_TOPIC, 1)
         
         self.xbox_current_control_state = self.XBOX_CONTROL_STATES.index("ARM")
         self.xbox_control_state_just_changed = False
@@ -217,11 +216,14 @@ class EffectorsAndArmControlSender(QtCore.QThread):
         self.last_left_bumper_state = 0
         self.last_right_bumper_state = 0
         self.last_back_button_state = 0
-        self.last_a_button_state = 0
-        self.last_y_button_state = 0
+        self.last_hat_x_was_movement = False
+        self.last_hat_y_was_movement = False
 
-    def run(self):
-        self.logger.debug("Starting Joystick Thread")
+    def run(self):       
+        self.logger.debug("Starting Effectors Thread")
+
+        effectors_executor = SingleThreadedExecutor()
+        effectors_executor.add_node(self.effectors_node)
 
         while self.run_thread_flag:
             start_time = time()
@@ -232,25 +234,27 @@ class EffectorsAndArmControlSender(QtCore.QThread):
                 self.send_gripper_home_on_back_press()
                 self.process_and_send_arm_control()
             elif self.xbox_current_control_state == self.XBOX_CONTROL_STATES.index("MINING"):
-                self.send_mining_home_on_back_press()
-                self.send_mining_commands()
+                self.send_compartment_commands()
 
-            self.send_hitch_commands()
+            effectors_executor.spin_once(timeout_sec = self.wait_time)
             time_diff = time() - start_time
 
             self.msleep(max(int(self.wait_time - time_diff), 0))
-            rclpy.spin_once(self.effectors_node, executor = None, timeout_sec = self.wait_time)
+            
 
         self.logger.debug("Stopping Joystick Thread")
 
     def connect_signals_and_slots(self):
         self.xbox_control_arm_stylesheet_update_ready__signal.connect(self.xbox_mode_arm_label.setStyleSheet)
         self.xbox_control_mining_stylesheet_update_ready__signal.connect(self.xbox_mode_mining_label.setStyleSheet)
+        self.drill_turn_clockwise_button.clicked.connect(self.on_drill_clockwise_clocked__slot)
+        self.drill_turn_counter_clockwise_button.clicked.connect(self.on_drill_counter_clockwise_clicked__slot)
+        self.drill_stop_button.clicked.connect(self.on_drill_stop_clicked__slot)
+        self.compartment_select.valueChanged.connect(self.send_compartment_commands)
 
     def change_control_state_if_needed(self):
         xbox_state = self.controller.controller_states["xbox_button"]
-        left_bumper_state = self.controller.controller_states["left_bumper"]
-        right_bumper_state = self.controller.controller_states["right_bumper"]
+
 
         if self.last_xbox_button_state == 0 and xbox_state == 1:
             self.xbox_current_control_state += 1
@@ -326,56 +330,40 @@ class EffectorsAndArmControlSender(QtCore.QThread):
         elif self.last_back_button_state == 1 and back_state == 0:
             self.last_back_button_state = 0
 
-    def send_mining_commands(self):
-        left_y_axis = self.controller.controller_states["left_y_axis"] if abs(
-            self.controller.controller_states["left_y_axis"]) > LEFT_Y_AXIS_DEADZONE else 0
-        right_y_axis = self.controller.controller_states["right_y_axis"] if abs(
-            self.controller.controller_states["right_y_axis"]) > RIGHT_Y_AXIS_DEADZONE else 0
+    def on_drill_clockwise_clocked__slot(self):
+        message = DrillControlMessage()
+        message.direction = True
+        message.speed = DRILL_SPEED
+        self.drill_control_publisher.publish(message)
 
-        message = MiningControlMessage()
+    def on_drill_counter_clockwise_clicked__slot(self):
+        message = DrillControlMessage()
+        message.direction = False
+        message.speed = DRILL_SPEED
+        self.drill_control_publisher.publish(message)
 
-        if left_y_axis:
-            message.linear_set_position_absolute = ((left_y_axis / THUMB_STICK_MAX) * MINING_LINEAR_SCALAR)
-            self.mining_control_publisher.publish(message)
+    def on_drill_stop_clicked__slot(self):
+        message = DrillControlMessage()
+        message.speed = 0
+        self.drill_control_publisher.publish(message)
 
-        if right_y_axis:
-            message.motor_set_position_absolute = ((right_y_axis / THUMB_STICK_MAX) * MINING_MOTOR_SCALAR)
-            self.mining_control_publisher.publish(message)
+    def send_compartment_commands(self):
+        mining_control = MiningControlMessage()
 
-    def send_mining_home_on_back_press(self):
-        message = MiningControlMessage()
-        back_state = self.controller.controller_states["back_button"]
+        if self.compartment_select.value() == 1:
+            print("Compartment 1")
+            mining_control.compartment = 1
+        if self.compartment_select.value() == 2:
+            print("Compartment 2")
+            mining_control.compartment = 2
+        if self.compartment_select.value() == 3:
+            print("Compartment 3")
+            mining_control.compartment = 3
+        if self.compartment_select.value() == 4:
+            print("Compartment 4")
+            mining_control.compartment = 4
 
-        if self.last_back_button_state == 0 and back_state == 1:
-            message.motor_go_home = True
-            self.mining_control_publisher.publish(message)
-            self.last_back_button_state = 1
-        elif self.last_back_button_state == 1 and back_state == 0:
-            self.last_back_button_state = 0
-
-    def send_hitch_commands(self):
-        y_button_state = self.controller.controller_states["y_button"]
-        a_button_state = self.controller.controller_states["a_button"]
-
-        message = TowerPanTiltControlMessage()
-        
-        if y_button_state == 0 and a_button_state == 0:
-            return
-
-        if self.last_y_button_state == 0 and y_button_state == 1:
-            message.hitch_servo_positive = 1
-            self.last_y_button_state = 1
-            self.tower_pan_tilt_command_publisher.publish(message)
-        elif self.last_y_button_state == 1 and y_button_state == 0:
-            self.last_y_button_state = 0
-
-        if self.last_a_button_state == 0 and a_button_state == 1:
-            message.hitch_servo_negative = 1
-            self.last_a_button_state = 1
-            self.tower_pan_tilt_command_publisher.publish(message)
-        elif self.last_a_button_state == 1 and a_button_state == 0:
-            self.last_a_button_state = 0 
-        
+        self.compartment_control_publisher.publish(mining_control)
 
     def setup_signals(self, start_signal, signals_and_slots_signal, kill_signal):
         start_signal.connect(self.start)

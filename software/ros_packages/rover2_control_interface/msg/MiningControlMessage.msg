@@ -15,3 +15,5 @@ uint16 servo2_target
 bool probe_take_reading
 
 bool overtravel
+
+uint8 compartment

@@ -20,6 +20,8 @@ ACCESS_POINT_PASSWORD = "rover4lyfe^"  # We don't care about this password, don'
 GET_CURRENT_CHANNEL_COMMAND = "iwlist ath0 channel"
 SET_CHANNEL_COMMAND = "iwconfig ath0 channel"
 
+SCREEN = "onescreen" #left
+
 
 #####################################
 # UbiquitiRadioSettings Class Definition
@@ -34,7 +36,7 @@ class UbiquitiRadioSettings(QtCore.QThread):
 
         # ########## Reference to class init variables ##########
         self.shared_objects = shared_objects
-        self.left_screen = self.shared_objects["screens"]["left_screen"]
+        self.left_screen = self.shared_objects["screens"][SCREEN]
 
         self.ubiquiti_channel_spin_box = self.left_screen.ubiquiti_channel_spin_box  # type: QtWidgets.QSpinBox
         self.ubiquiti_channel_apply_button = self.left_screen.ubiquiti_channel_apply_button  # type: QtWidgets.QPushButton
@@ -95,7 +97,7 @@ class UbiquitiRadioSettings(QtCore.QThread):
         ssh_stdin, ssh_stdout, ssh_stderr = self.ssh_client.exec_command(GET_CURRENT_CHANNEL_COMMAND)
         output = ssh_stdout.read()
 
-        for line in output.split("\n"):
+        for line in output.decode().split("\n"):
             if "Current Frequency:" in line:
                 channel = line.strip("()").split("Channel ")[1]
                 break

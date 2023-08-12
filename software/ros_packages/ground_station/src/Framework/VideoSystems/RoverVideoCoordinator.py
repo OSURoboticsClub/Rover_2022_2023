@@ -33,6 +33,7 @@ STYLESHEET_UNSELECTED = "background-color:black;"
 COLOR_GREEN = "background-color: darkgreen;"
 COLOR_RED = "background-color: darkred;"
 
+SCREEN = "onescreen" #right
 
 #####################################
 # RoverVideoCoordinator Class Definition
@@ -52,7 +53,7 @@ class RoverVideoCoordinator(QtCore.QThread):
 
         # ########## Reference to class init variables ##########
         self.shared_objects = shared_objects
-        self.right_screen = self.shared_objects["screens"]["right_screen"]
+        self.right_screen = self.shared_objects["screens"][SCREEN]
         self.primary_video_display_label = self.right_screen.primary_video_label  # type:QtWidgets.QLabel
         self.secondary_video_display_label = self.right_screen.secondary_video_label  # type:QtWidgets.QLabel
         self.tertiary_video_display_label = self.right_screen.tertiary_video_label  # type:QtWidgets.QLabel
@@ -91,12 +92,12 @@ class RoverVideoCoordinator(QtCore.QThread):
         # Reset default cameras
         self.chassis_publisher = self.video_coordinator.create_publisher(CameraControlMessage, "/cameras/chassis/camera_control", 1)
         self.chassis_publisher.publish(reset_camera_message)
-        self.under_publisher = self.video_coordinator.create_publisher(CameraControlMessage, "/cameras/undercarriage/camera_control", 1)
-        self.under_publisher.publish(reset_camera_message)
+        #self.under_publisher = self.video_coordinator.create_publisher(CameraControlMessage, "/cameras/undercarriage/camera_control", 1)
+        #self.under_publisher.publish(reset_camera_message)
         self.nav_publisher = self.video_coordinator.create_publisher(CameraControlMessage, "/cameras/main_navigation/camera_control", 1)
         self.nav_publisher.publish(reset_camera_message)
-        self.effector_publisher = self.video_coordinator.create_publisher(CameraControlMessage, "/cameras/end_effector/camera_control", 1)
-        self.effector_publisher.publish(reset_camera_message)
+        #self.effector_publisher = self.video_coordinator.create_publisher(CameraControlMessage, "/cameras/end_effector/camera_control", 1)
+        #self.effector_publisher.publish(reset_camera_message)
 
         self.msleep(3000)
 
@@ -151,10 +152,14 @@ class RoverVideoCoordinator(QtCore.QThread):
         elif self.current_label_for_joystick_adjust == 2:  # tertiary
             setting = self.tertiary_label_current_setting
 
+        print(setting, self.chassis_index, self.main_nav_index)
+
         if setting == self.main_nav_index:
-            self.pan_tilt_selection_changed__signal.emit("tower_pan_tilt")
+            self.pan_tilt_selection_changed__signal.emit("tower_pan_tilt") #temp change while cameras aren't all connected
+            print("got tower")
         elif setting == self.chassis_index:
             self.pan_tilt_selection_changed__signal.emit("chassis_pan_tilt")
+            print("got chassis")
         else:
             self.pan_tilt_selection_changed__signal.emit("no_pan_tilt")
 
@@ -210,11 +215,10 @@ class RoverVideoCoordinator(QtCore.QThread):
 
     def __get_cameras(self):
         topics = self.video_coordinator.get_topic_names_and_types()
-        print(topics)
+        #print(topics)
         
         names = []
 
-        #todo: check if len of split is >= 3
         #check that first index is cameras
         for topics_group in topics:
             main_topic = topics_group[0]
@@ -238,10 +242,12 @@ class RoverVideoCoordinator(QtCore.QThread):
         if "main_navigation" in names:
             self.valid_cameras.append("main_navigation")
             self.main_nav_index = current_count
+            print("got main nav")
             current_count += 1
 
         if "chassis" in names:
             self.valid_cameras.append("chassis")
+            print("got chassis")
             self.chassis_index = current_count
 
         if "undercarriage" in names:
@@ -250,7 +256,11 @@ class RoverVideoCoordinator(QtCore.QThread):
         if "end_effector" in names:
             self.valid_cameras.append("end_effector")
 
+        self.valid_cameras.append("main_navigation")
+        
+
     def __setup_video_threads(self):
+        #print(self.valid_cameras)
         for camera in self.valid_cameras:
             self.camera_threads[camera] = RoverVideoReceiver.RoverVideoReceiver(camera)
 
@@ -371,7 +381,7 @@ class RoverVideoCoordinator(QtCore.QThread):
     def on_gui_selected_camera_toggled(self):
         if self.current_label_for_joystick_adjust == 0: # primary
             if self.primary_label_current_setting in self.disabled_cameras:
-                self.disabled_cameras.remove(self.primary_label_current_setting)
+                self.disabled_cameras.rprintemove(self.primary_label_current_setting)
             else:
                 self.disabled_cameras.append(self.primary_label_current_setting)
             self.camera_threads[self.valid_cameras[self.primary_label_current_setting]].toggle_video_display()

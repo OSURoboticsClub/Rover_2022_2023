@@ -27,6 +27,9 @@ class TrackingCore(QtCore.QThread):
 		self.base_lon = self.left_screen.base_lon #type: QtWidget.QLabel
 		self.manual_angle_text = self.left_screen.manual_angle_text #type: QtWidgets.QLineEdit
 		self.manual_angle_pb = self.left_screen.manual_angle_pb #type: QtWidgets.QPushButton
+		self.bearing_angle = self.left_screen.bearing_angle #type: QtWidgets.QLabel
+		self.base_gps_fix = self.left_screen.base_gps_fix #type: QtWidgets.Qlabel
+		self.rover_gps_fix = self.left_screen.rover_gps_fix #type: QtWidgets.Qlabel
 		
 		# ########## Get the settings instance ##########
 		self.settings = QtCore.QSettings()
@@ -67,6 +70,12 @@ class TrackingCore(QtCore.QThread):
 		
 	def updateBearing(self,value):
 		self.bearing_angle.setNum(value)
+
+	def update_base_fix_data(self, value):
+		self.base_gps_fix.setText(value)
+
+	def update_rover_fix_data(self, value):
+		self.rover_gps_fix.setText(value)
 		
 	def verify_angle(self, validator):
 		state = validator.validate(self.manual_angle_text.text(), 0)
@@ -88,6 +97,8 @@ class TrackingCore(QtCore.QThread):
 		self.trackingThread.base_lat_update_ready__signal.connect(self.updateBLat)
 		self.trackingThread.base_lon_update_ready__signal.connect(self.updateBLon)
 		self.trackingThread.bearing_update_ready__signal.connect(self.updateBearing)
+		self.trackingThread.base_fix_update_ready__signal.connect(self.update_base_fix_data)
+		self.trackingThread.rover_fix_update_ready__signal.connect(self.update_rover_fix_data)
 		#set validator for angle text
 		validator = QtGui.QDoubleValidator(0.00, 360.00, 2)
 		self.manual_angle_text.editingFinished.connect(partial(self.verify_angle, validator))
