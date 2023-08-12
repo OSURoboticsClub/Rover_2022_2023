@@ -17,7 +17,7 @@ import Framework.LoggingSystems.Logger as Logger
 import Framework.VideoSystems.RoverVideoCoordinator as RoverVideoCoordinator
 #import Framework.MapSystems.RoverMapCoordinator as RoverMapCoordinator
 import Framework.ControlSystems.DriveAndCameraControlSender as JoystickControlSender
-#import Framework.ControlSystems.EffectorsAndArmControlSender as ControllerControlSender
+import Framework.ControlSystems.EffectorsAndArmControlSender as ControllerControlSender
 #import Framework.NavigationSystems.SpeedAndHeadingIndication as SpeedAndHeading
 #import Framework.NavigationSystems.WaypointsCoordinator as WaypointsCoordinator
 #import Framework.ArmSystems.ArmIndication as ArmIndication
