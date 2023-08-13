@@ -220,9 +220,10 @@ class EffectorsControl(Node):
         self.failed_drill_modbus_count = 0
         self.failed_linear_modbus_count = 0
 
-        self.which_effector = self.EFFECTORS.index("GRIPPER")
+        self.which_effector = self.EFFECTORS.index("SCIENCE")
 
         self.gripper_position_status = 0
+        self.compartment = 0
 
         self.timer = self.create_timer(self.wait_time, self.main_loop)
 
@@ -261,7 +262,7 @@ class EffectorsControl(Node):
                 print(e)
                 self.failed_science_modbus_count += 1
 
-            if self.failed_science_modbus_count == FAILED_SCIENCE_MODBUS_LIMIMT:
+            if self.failed_science_modbus_count == FAILED_SCIENCE_MODBUS_LIMIT:
                 print("No effectors present. Exiting....")
                 self.destroy_node()
                 return
@@ -270,10 +271,11 @@ class EffectorsControl(Node):
         self.process_gripper_control_message()
         self.process_linear_control_message()
         self.send_gripper_status_message()
+        #self.process_linear_control_message()
 
     def run_science(self):
-        self.process_science_control_message()
-        self.process_drill_control_messages()
+        #self.process_science_control_message()
+        #self.process_drill_control_messages()
         self.process_linear_control_message()
 
     def connect_to_nodes(self):
@@ -284,9 +286,10 @@ class EffectorsControl(Node):
 
         self.__setup_minimalmodbus_for_485()
 
-    def process_mining_control_message(self):
-        if self.new_mining_control_message:
-            self.science_registers[SCIENCE_MODBUS_REGISTERS["STEPPER_POSITION"]] = 465 * self.science_control_message.compartment
+    def process_science_control_message(self):
+        if self.new_science_control_message:
+            self.compartment += (self.science_control_message.compartment - 1 - (self.compartment % 4)) % 4
+            self.science_registers[SCIENCE_MODBUS_REGISTERS["STEPPER_POSITION"]] = 465 * self.compartment
             self.science_node.write_registers(0, self.science_registers)
             self.modbus_nodes_seen_time = time()
             self.new_science_control_message = False
@@ -295,10 +298,11 @@ class EffectorsControl(Node):
         if self.new_linear_control_message:
             direction = self.linear_control_message.direction
             self.linear_registers[LINEAR_MODBUS_REGISTERS["DIRECTION"]] = direction
+            self.linear_registers[LINEAR_MODBUS_REGISTERS["SLEEP"]] = 1
 
-            self.science_registers = self.science_node.read_registers(0, len(self.science_registers))
-            is_lim_hit = any(self.science_registers[SCIENCE_MODBUS_REGISTERS["LIM_SW1"]:SCIENCE_MODBUS_REGISTERS["LIM_SW4"]+1])
-            if not is_lim_hit or not direction: #check this!!!
+            #self.science_registers = self.science_node.read_registers(0, len(self.science_registers))
+            is_lim_hit = False #any(self.science_registers[SCIENCE_MODBUS_REGISTERS["LIM_SW1"]:SCIENCE_MODBUS_REGISTERS["LIM_SW4"]+1])
+            if not is_lim_hit or not direction:
                 self.linear_registers[LINEAR_MODBUS_REGISTERS["SPEED"]] = min(self.linear_control_message.speed, UINT16_MAX)
             else:
                 self.linear_registers[LINEAR_MODBUS_REGISTERS["SPEED"]] = 0
@@ -319,9 +323,9 @@ class EffectorsControl(Node):
 
                 #gripper_homing_time = time()
                 while not homing_complete:
-                    print("entered homing while")
                     #time_elapsed = time() - gripper_homing_time
                     self.gripper_registers = self.gripper_node.read_registers(0, len(GRIPPER_MODBUS_REGISTERS))
+                    print(self.gripper_registers)
                     #self.send_gripper_status_message()
                     #print("time elapsed: ", time_elapsed, "homing start time: ", self.gripper_homing_time)
 
@@ -334,13 +338,9 @@ class EffectorsControl(Node):
                     #print(self.gripper_registers[GRIPPER_MODBUS_REGISTERS["LASER"]])
                     #print(self.gripper_registers[GRIPPER_MODBUS_REGISTERS["IS_HOMED"]])
 
-                    print(self.gripper_registers[GRIPPER_MODBUS_REGISTERS["IS_HOMED"]])
                     if self.gripper_registers[GRIPPER_MODBUS_REGISTERS["IS_HOMED"]]:
                         homing_complete = True
-                        self.gripper_registers = None
                         print("GRIPPER HOMING COMPLETE")
-                        if self.gripper_registers[GRIPPER_MODBUS_REGISTERS["IS_HOMED"]]:
-                            print("is_homed true")
                         #gripper_homing_time = 0
 
             else:
@@ -354,14 +354,15 @@ class EffectorsControl(Node):
 
                 gripper_target = self.gripper_control_message.target
 
-                if INT16_MIN < gripper_target < INT16_MAX:
+                if -30000 < gripper_target < 30000:
                     new_position = self.gripper_position_status + gripper_target
                     self.gripper_registers[GRIPPER_MODBUS_REGISTERS["TARGET"]] = min(max(new_position, 0), INT16_MAX)
+                    self.gripper_registers[GRIPPER_MODBUS_REGISTERS["SPEED"]] = 30000
+                    self.gripper_registers[GRIPPER_MODBUS_REGISTERS["DIRECTION"]] = 1
 
                 self.gripper_node.write_registers(0, self.gripper_registers)
                 print(self.gripper_registers)
 
-        self.gripper_control_message = None
         self.new_gripper_control_message = False
 
     def send_gripper_status_message(self):
@@ -371,8 +372,8 @@ class EffectorsControl(Node):
         message.position_raw = registers[GRIPPER_MODBUS_REGISTERS["POSITION"]]
         self.gripper_position_status = message.position_raw
         message.temp = registers[GRIPPER_MODBUS_REGISTERS["TEMP"]]
-        message.light_on = registers[GRIPPER_MODBUS_REGISTERS["LED"]]
-        message.laser_on = registers[GRIPPER_MODBUS_REGISTERS["LASER"]]
+        message.light_on = bool(registers[GRIPPER_MODBUS_REGISTERS["LED"]])
+        message.laser_on = bool(registers[GRIPPER_MODBUS_REGISTERS["LASER"]])
         message.current = registers[GRIPPER_MODBUS_REGISTERS["CURRENT"]]
         message.distance = registers[GRIPPER_MODBUS_REGISTERS["DISTANCE"]]
 

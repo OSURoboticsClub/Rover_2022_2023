@@ -54,12 +54,12 @@ public:
         small_image_node_name = base_topic + "/image_" + std::to_string(small_image_width) + "x" + std::to_string(small_image_height);
 
         rclcpp::Node::SharedPtr node_handle_ = std::shared_ptr<RoverCamera>(this);
-        large_image_transport = new image_transport::ImageTransport(node_handle_);
-        medium_image_transport = new image_transport::ImageTransport(node_handle_);
+        //large_image_transport = new image_transport::ImageTransport(node_handle_);
+        //medium_image_transport = new image_transport::ImageTransport(node_handle_);
         small_image_transport = new image_transport::ImageTransport(node_handle_);
 
-        large_image_publisher = large_image_transport->advertise(large_image_node_name, 1);
-        medium_image_publisher = medium_image_transport->advertise(medium_image_node_name, 1);
+        //large_image_publisher = large_image_transport->advertise(large_image_node_name, 1);
+        //medium_image_publisher = medium_image_transport->advertise(medium_image_node_name, 1);
         small_image_publisher = small_image_transport->advertise(small_image_node_name, 1);
 
         control_subscriber = this->create_subscription<rover2_camera_interface::msg::CameraControlMessage>(base_topic + "/camera_control", 1, std::bind(&RoverCamera::control_callback, this, _1));
@@ -102,14 +102,15 @@ public:
                 cv::flip(image_large, image_large, -1);
             }
 
-            if(broadcast_large_image){
-                large_image_message = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", image_large).toImageMsg();
-                large_image_publisher.publish(large_image_message);
-            }else if(broadcast_medium_image){
-                cv::resize(image_large, image_medium, cv::Size(medium_image_width, medium_image_height));
-                medium_image_message = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", image_medium).toImageMsg();
-                medium_image_publisher.publish(medium_image_message);
-            }else if(broadcast_small_image){
+            //if(broadcast_large_image){
+            //    large_image_message = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", image_large).toImageMsg();
+            //    large_image_publisher.publish(large_image_message);
+            //}else if(broadcast_medium_image){
+            //    cv::resize(image_large, image_medium, cv::Size(medium_image_width, medium_image_height));
+            //    medium_image_message = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", image_medium).toImageMsg();
+            //    medium_image_publisher.publish(medium_image_message);
+            //}else 
+            if(broadcast_small_image){
                 cv::resize(image_large, image_small, cv::Size(small_image_width, small_image_height));
                 small_image_message = cv_bridge::CvImage(std_msgs::msg::Header(), "bgr8", image_small).toImageMsg();
                 small_image_publisher.publish(small_image_message);
@@ -119,8 +120,8 @@ public:
 
     void control_callback(const rover2_camera_interface::msg::CameraControlMessage::SharedPtr msg) {
         broadcast_small_image = msg->enable_small_broadcast;
-        broadcast_medium_image = msg->enable_medium_broadcast;
-        broadcast_large_image = msg->enable_large_broadcast;
+        //broadcast_medium_image = msg->enable_medium_broadcast;
+        //broadcast_large_image = msg->enable_large_broadcast;
     }
 
     ~RoverCamera(){
@@ -158,12 +159,12 @@ private:
     std::string medium_image_node_name;
     std::string small_image_node_name;
 
-    image_transport::ImageTransport *large_image_transport;
-    image_transport::ImageTransport *medium_image_transport;
+    //image_transport::ImageTransport *large_image_transport;
+    //image_transport::ImageTransport *medium_image_transport;
     image_transport::ImageTransport *small_image_transport;
 
-    image_transport::Publisher large_image_publisher;
-    image_transport::Publisher medium_image_publisher;
+    //image_transport::Publisher large_image_publisher;
+    //image_transport::Publisher medium_image_publisher;
     image_transport::Publisher small_image_publisher;
 
     rclcpp::Subscription<rover2_camera_interface::msg::CameraControlMessage>::SharedPtr control_subscriber;
@@ -176,8 +177,8 @@ private:
     cv::Mat image_medium;
     cv::Mat image_small;
 
-    sensor_msgs::msg::Image::SharedPtr large_image_message;
-    sensor_msgs::msg::Image::SharedPtr medium_image_message;
+    //sensor_msgs::msg::Image::SharedPtr large_image_message;
+    //sensor_msgs::msg::Image::SharedPtr medium_image_message;
     sensor_msgs::msg::Image::SharedPtr small_image_message;
 
 };

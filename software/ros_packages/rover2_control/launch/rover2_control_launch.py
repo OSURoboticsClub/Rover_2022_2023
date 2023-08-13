@@ -77,10 +77,10 @@ def generate_launch_description():
             name='tower_and_pan_tilt',
             **config
         ),
-        #Node(
-        #    package='rover2_control',
-        #    executable='effectors_control',
-        #    name='effectors',
-        #    **config
-        #)
+        Node(
+            package='rover2_control',
+            executable='effectors_control',
+            name='effectors',
+            **config
+        )
     ])
