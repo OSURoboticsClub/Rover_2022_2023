@@ -1,0 +1,7 @@
+bool should_center
+
+int16 relative_pan_adjustment
+int16 relative_tilt_adjustment
+
+bool hitch_servo_positive
+bool hitch_servo_negative

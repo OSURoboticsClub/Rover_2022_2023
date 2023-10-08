@@ -1,1 +1,10 @@
 .idea
+<<<<<<< HEAD
+
+build
+install
+log
+__pycache__
+=======
+.atsuo
+>>>>>>> origin/SAM4S_firmware

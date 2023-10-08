@@ -14,10 +14,10 @@ import paramiko
 #####################################
 THREAD_HERTZ = 5
 
-IP = "192.168.1.10"
+IP = "192.168.1.138"
 USER = "nvidia"
 PASS = "nvidia"
-
+SCREEN = "onescreen" #left
 
 #####################################
 # BashConsole Class Definition
@@ -31,7 +31,7 @@ class BashConsole(QtCore.QThread):
 
         # ########## Reference to class init variables ##########
         self.shared_objects = shared_objects
-        self.left_screen = self.shared_objects["screens"]["left_screen"]
+        self.left_screen = self.shared_objects["screens"]["onescreen"]
 
         self.console_text_edit = self.left_screen.console_line_edit  # type: QtWidgets.QTextEdit
         self.ssh_console_command_line_edit = self.left_screen.ssh_console_command_line_edit  # type:QtWidgets.QLineEdit
@@ -80,7 +80,7 @@ class BashConsole(QtCore.QThread):
                 self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 self.ssh_client.connect(IP, username=USER, password=PASS, compress=True)
             except:
-                print "No connection"
+                print("No connection")
                 if not self.run_thread_flag:
                     return
                 self.ssh_client = None
@@ -125,7 +125,7 @@ class BashConsole(QtCore.QThread):
     def on_login_button_pressed__slot(self):
         current_ip = self.ssh_host_line_edit.text()
         self.new_command_text = "python equipment_servicing_interface.py '%s' 'LOGIN MTECH GITRDONE' HELP" % current_ip
-        print self.new_command_text
+        print(self.new_command_text)
         self.new_command = True
 
     def on_logout_button_pressed__slot(self):

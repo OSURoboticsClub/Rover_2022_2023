@@ -2,6 +2,7 @@
 # Imports
 #####################################
 # Python native imports
+from socket import timeout
 from PyQt5 import QtCore, QtGui, QtWidgets
 import logging
 import cv2
@@ -9,18 +10,21 @@ import numpy as np
 import qimage2ndarray
 from time import time
 
-import rospy
-import dynamic_reconfigure.client
+import rclpy
+from rclpy.qos import qos_profile_sensor_data
+from rclpy.node import Node
+from rclpy.executors import SingleThreadedExecutor
+#import dynamic_reconfigure.client
 from cv_bridge import CvBridge
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import CompressedImage, Image
 
 # Custom Imports
-from rover_camera.msg import CameraControlMessage
+from rover2_camera_interface.msg import CameraControlMessage
 
 #####################################
 # Global Variables
 #####################################
-CAMERA_TOPIC_PATH = "/cameras/"
+CAMERA_TOPIC_PATH = "/cameras"
 
 QUALITY_MAX = 80
 QUALITY_MIN = 15
@@ -60,17 +64,22 @@ class RoverVideoReceiver(QtCore.QThread):
         # ########## Thread Flags ##########
         self.run_thread_flag = True
 
+        # ########## Create Receiver Node ############
+        self.video_receiver_node = Node("video_receiver_node")
+
         # ########## Class Variables ##########
         self.camera_title_name = self.camera_name.replace("_", " ").title()
 
-        self.topic_base_path = CAMERA_TOPIC_PATH + self.camera_name
+        self.topic_base_path = CAMERA_TOPIC_PATH + "/" + self.camera_name
         self.control_topic_path = self.topic_base_path + "/camera_control"
+        self.wait_time = 1/20
 
         # Subscription variables
         self.video_subscribers = []
 
         # Publisher variables
-        self.camera_control_publisher = rospy.Publisher(self.control_topic_path, CameraControlMessage, queue_size=1)
+        #ROS1 CODE: self.camera_control_publisher = rospy.Publisher(self.control_topic_path, CameraControlMessage, queue_size=1)
+        self.camera_control_publisher = self.video_receiver_node.create_publisher(CameraControlMessage, self.control_topic_path, 1)
 
         # Set up resolution mappings
         self.RESOLUTION_MAPPINGS[(1280, 720)] = CameraControlMessage()
@@ -115,22 +124,36 @@ class RoverVideoReceiver(QtCore.QThread):
         self.__create_camera_name_opencv_images()
 
         # Attach subscribers now that everything is set up
-        self.video_subscribers.append(rospy.Subscriber(self.topic_base_path + "/image_1280x720/compressed", CompressedImage, self.__image_data_received_callback))
-        self.video_subscribers.append(rospy.Subscriber(self.topic_base_path + "/image_640x360/compressed", CompressedImage, self.__image_data_received_callback))
-        self.video_subscribers.append(rospy.Subscriber(self.topic_base_path + "/image_256x144/compressed", CompressedImage, self.__image_data_received_callback))
+        #rospy.Subscriber(self.topic_base_path + "/image_1280x720/compressed", CompressedImage, self.__image_data_received_callback)
+        self.video_subscribers.append(self.video_receiver_node.create_subscription(CompressedImage, self.topic_base_path + "/image_1280x720/compressed", self.__image_data_received_callback, qos_profile_sensor_data))
+        #rospy.Subscriber(self.topic_base_path + "/image_640x360/compressed", CompressedImage, self.__image_data_received_callback)
+        self.video_subscribers.append(self.video_receiver_node.create_subscription(CompressedImage, self.topic_base_path + "/image_640x360/compressed", self.__image_data_received_callback, qos_profile_sensor_data))
+        #rospy.Subscriber(self.topic_base_path + "/image_256x144/compressed", CompressedImage, self.__image_data_received_callback)
+        self.video_subscribers.append(self.video_receiver_node.create_subscription(CompressedImage, self.topic_base_path + "/image_256x144/compressed", self.__image_data_received_callback, qos_profile_sensor_data))
 
     def run(self):
         self.logger.debug("Starting \"%s\" Camera Thread" % self.camera_title_name)
 
         self.__enable_camera_resolution(self.RESOLUTION_OPTIONS[self.current_resolution_index])
 
+
+        receiver_executor = SingleThreadedExecutor() #create single threaded exec object
+        receiver_executor.add_node(self.video_receiver_node)
+ 
         while self.run_thread_flag:
+            start_time = time()
+
             if self.video_enabled:
                 self.__show_video_enabled()
             else:
                 self.__show_video_disabled()
 
-            self.msleep(10)
+            receiver_executor.spin_once(timeout_sec = self.wait_time)
+            #rclpy.spin_once(self.video_receiver_node, executor = None, timeout_sec = self.wait_time)
+            # This ensures the while loop runs every 1/20th of a second regardless of how long the functions take
+            # to execute. (If I understand it right).
+            time_diff = time() - start_time
+            self.msleep(max(int(self.wait_time - time_diff), 0))
 
         self.logger.debug("Stopping \"%s\" Camera Thread" % self.camera_title_name)
 
@@ -152,7 +175,7 @@ class RoverVideoReceiver(QtCore.QThread):
             if self.last_resolution_index != self.current_resolution_index:
                 self.camera_control_publisher.publish(
                     self.RESOLUTION_MAPPINGS[self.RESOLUTION_OPTIONS[self.current_resolution_index]])
-                print "Setting %s to %s" % (self.camera_title_name, self.RESOLUTION_OPTIONS[self.current_resolution_index])
+                print("Setting %s to %s".format(self.camera_title_name, self.RESOLUTION_OPTIONS[self.current_resolution_index]))
                 self.last_resolution_index = self.current_resolution_index
                 self.resolution_just_adjusted = True
 
@@ -170,8 +193,8 @@ class RoverVideoReceiver(QtCore.QThread):
                 self.__create_final_pixmaps(opencv_image)
 
                 self.image_ready_signal.emit(self.camera_name)
-            except Exception, error:
-                print "Failed with error:" + str(error)
+            except Exception as error:
+                print("Failed with error:" + str(error))
 
             self.new_frame = False
 
@@ -226,7 +249,7 @@ class RoverVideoReceiver(QtCore.QThread):
         cv2.putText(
             camera_name_opencv_image,
             self.camera_title_name,
-            ((camera_name_width_buffered - camera_name_text_width) / 2, int((camera_name_height_buffered * 2) / 3)),
+            ((camera_name_width_buffered - camera_name_text_width) // 2, int((camera_name_height_buffered * 2) // 3)),
             self.font,
             1,
             (255, 255, 255),
@@ -237,7 +260,7 @@ class RoverVideoReceiver(QtCore.QThread):
             cv2.resize(camera_name_opencv_image, (camera_name_width_buffered, camera_name_height_buffered))
 
         self.camera_name_opencv_640x360_image = \
-            cv2.resize(camera_name_opencv_image, (camera_name_width_buffered / 2, camera_name_height_buffered / 2))
+            cv2.resize(camera_name_opencv_image, (camera_name_width_buffered // 2, camera_name_height_buffered // 2))
 
     def set_hard_max_resolution(self, resolution):
         self.max_resolution_index = self.RESOLUTION_OPTIONS.index(resolution)

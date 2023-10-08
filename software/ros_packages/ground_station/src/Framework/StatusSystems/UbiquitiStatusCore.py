@@ -21,6 +21,8 @@ ACCESS_POINT_PASSWORD = "rover4lyfe^"  # We don't care about this password, don'
 
 GENERAL_WIRELESS_INFO_COMMAND = "wstalist"
 
+SCREEN = "onescreen" #left
+
 
 #####################################
 # UbiquitiRadioSettings Class Definition
@@ -36,7 +38,7 @@ class UbiquitiStatus(QtCore.QThread):
 
         # ########## Reference to class init variables ##########
         self.shared_objects = shared_objects
-        self.left_screen = self.shared_objects["screens"]["left_screen"]
+        self.left_screen = self.shared_objects["screens"][SCREEN]
 
         self.connection_quality_label = self.left_screen.connection_quality_label
         self.successful_transmit_label = self.left_screen.successful_transmit_label
@@ -68,8 +70,8 @@ class UbiquitiStatus(QtCore.QThread):
 
             try:
                 self.get_and_show_ubiquiti_status()
-            except Exception, e:
-                print e
+            except Exception as e:
+                print(e)
 
             time_diff = time() - start_time
 
